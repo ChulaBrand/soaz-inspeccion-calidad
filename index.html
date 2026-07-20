@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Módulo de Inspección de Calidad – Reempaque de Papaya SOAZ">
+  <title>SOAZ · Inspección de Calidad</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0b1220;
+      --bg-panel: #111827;
+      --bg-elevated: #1a2332;
+      --bg-input: #0f172a;
+      --border: #2a3548;
+      --border-strong: #3d4f6a;
+      --text: #e8edf5;
+      --text-muted: #8b9cb3;
+      --accent: #f59e0b;
+      --accent-hover: #fbbf24;
+      --accent-soft: rgba(245, 158, 11, 0.14);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.16);
+      --success: #22c55e;
+      --success-soft: rgba(34, 197, 94, 0.16);
+      --info: #38bdf8;
+      --warning: #f97316;
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+      --font-display: "Barlow Condensed", "Segoe UI", sans-serif;
+      --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+      --touch-min: 56px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: var(--bg-deep);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.45;
+      overscroll-behavior: none;
+    }
+
+    body {
+      background:
+        radial-gradient(ellipse 120% 80% at 50% -20%, rgba(245, 158, 11, 0.08), transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.05), transparent 40%),
+        linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: inherit;
+    }
+
+    .app-shell {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: calc(12px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.75rem, 4vw, 2.35rem);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    .brand-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .shift-badge {
+      text-align: right;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .shift-badge strong {
+      display: block;
+      color: var(--text);
+      font-size: 0.88rem;
+    }
+
+    .screen {
+      display: none;
+      flex: 1;
+      animation: fadeIn 0.22s ease;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px 20px;
+    }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin: 0 0 6px;
+    }
+
+    .panel-desc {
+      margin: 0 0 20px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .field-group {
+      margin-bottom: 18px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .field-input {
+      width: 100%;
+      min-height: var(--touch-min);
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text);
+      font-size: 1.05rem;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .field-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: var(--touch-min);
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #111827;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      border: 2px solid var(--border-strong);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      border-color: var(--accent);
+    }
+
+    .btn-danger {
+      background: var(--danger-soft);
+      border: 2px solid var(--danger);
+      color: #fecaca;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.28);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 2px dashed var(--border-strong);
+      color: var(--text-muted);
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    .btn-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .btn-grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .btn-grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .btn-grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .btn-defect {
+      min-height: 88px;
+      padding: 18px 16px;
+      background: var(--bg-elevated);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn-defect:hover {
+      border-color: var(--accent);
+      background: rgba(245, 158, 11, 0.06);
+    }
+
+    .btn-defect.critical {
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(248, 113, 113, 0.08);
+    }
+
+    .btn-defect.critical:hover {
+      border-color: rgba(252, 165, 165, 0.55);
+      background: rgba(248, 113, 113, 0.12);
+    }
+
+    .btn-defect.critical .btn-defect-label {
+      color: #fca5a5;
+    }
+
+    .btn-delete-packer {
+      min-height: 44px;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid rgba(248, 113, 113, 0.4);
+      border-radius: 8px;
+      color: #fca5a5;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .btn-delete-packer:hover {
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(252, 165, 165, 0.7);
+    }
+
+    .search-bar {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .search-mode {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+    }
+
+    .search-mode label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .search-mode input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .search-bar .field-input {
+      min-height: 48px;
+    }
+
+    .btn-defect-label {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .btn-defect-hint {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .btn-option {
+      min-height: 72px;
+      background: var(--bg-elevated);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .btn-option:hover {
+      border-color: var(--accent);
+    }
+
+    .btn-option.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-hover);
+    }
+
+    .btn-packer {
+      min-height: 76px;
+      background: var(--bg-elevated);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 14px 16px;
+      text-align: left;
+    }
+
+    .btn-packer:hover {
+      border-color: var(--accent);
+    }
+
+    .btn-packer-code {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-packer-name {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .btn-packer-errors {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: var(--warning);
+    }
+
+    .toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .packer-list {
+      display: grid;
+      gap: 10px;
+      max-height: 340px;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-bottom: 16px;
+    }
+
+    .packer-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg-elevated);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .packer-row.inactive {
+      opacity: 0.5;
+    }
+
+    .packer-row-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .packer-row-code {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .packer-row-name {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .checkbox-wrap input {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--accent);
+    }
+
+    .flow-header {
+      margin-bottom: 16px;
+    }
+
+    .flow-step {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-hover);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .flow-breadcrumb {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .flow-breadcrumb span {
+      color: var(--accent);
+    }
+
+    .toast-container {
+      position: fixed;
+      top: calc(12px + var(--safe-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      width: min(92vw, 420px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.92rem;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      animation: toastIn 0.25s ease;
+    }
+
+    .toast.success {
+      background: #14532d;
+      border: 1px solid var(--success);
+      color: #bbf7d0;
+    }
+
+    .toast.error {
+      background: #450a0a;
+      border: 1px solid var(--danger);
+      color: #fecaca;
+    }
+
+    .toast.info {
+      background: #0c4a6e;
+      border: 1px solid var(--info);
+      color: #bae6fd;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(4px);
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(100%, 440px);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .modal-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin: 0 0 10px;
+    }
+
+    .modal-text {
+      margin: 0 0 20px;
+      color: var(--text-muted);
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .subform-card {
+      background: var(--bg-elevated);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .subform-title {
+      margin: 0 0 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .footer-bar {
+      margin-top: auto;
+      padding-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-close-shift {
+      min-height: 40px;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+    }
+
+    .btn-close-shift:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status-pill.online {
+      background: var(--success-soft);
+      color: #86efac;
+    }
+
+    .status-pill.offline {
+      background: rgba(148, 163, 184, 0.16);
+      color: #cbd5e1;
+    }
+
+    .status-pill.syncing {
+      background: rgba(56, 189, 248, 0.16);
+      color: #7dd3fc;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--text-muted);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .sync-banner {
+      display: none;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #bae6fd;
+      font-size: 0.88rem;
+    }
+
+    .sync-banner.visible {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .sync-banner-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .sync-banner .btn {
+      min-height: 40px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 720px) {
+      .btn-grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .btn-grid-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .shift-badge {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .btn-grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand-block">
+        <div class="brand-title">SOAZ</div>
+        <div class="brand-subtitle">Inspección de Calidad · Papaya</div>
+      </div>
+      <div class="shift-badge" id="shiftInfo">
+        <span id="connectionStatus" class="status-pill offline">Sin conexión API</span>
+        <strong id="supervisorDisplay">Sin supervisor</strong>
+        <span id="operationalDayDisplay">Día operativo —</span>
+      </div>
+    </header>
+
+    <div class="sync-banner" id="syncBanner">
+      <span id="syncBannerText">Registros pendientes en cola. Se enviarán al recuperar conexión.</span>
+      <div class="sync-banner-actions">
+        <button class="btn btn-secondary" type="button" id="btnRetrySync">Reintentar envío</button>
+        <button class="btn btn-ghost" type="button" id="btnClearQueue">Vaciar cola</button>
+      </div>
+    </div>
+
+    <main id="screenSupervisor" class="screen active">
+      <section class="panel">
+        <h1 class="panel-title">Inicio de Turno</h1>
+        <p class="panel-desc">Ingresa el nombre del supervisor para habilitar la gestión de empacadores y el tablero de inspección.</p>
+        <form id="supervisorForm" method="post" action="#">
+          <div class="field-group">
+            <label class="field-label" for="supervisorName">Nombre del Supervisor</label>
+            <input class="field-input" id="supervisorName" name="supervisorName" type="text" autocomplete="name" placeholder="Ej. María González" required>
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Continuar</button>
+        </form>
+        <div class="toolbar-row" style="margin-top:14px;">
+          <button class="btn btn-secondary btn-block" type="button" id="btnTestSheet">Probar conexión con Google Sheets</button>
+        </div>
+        <p class="panel-desc" id="fileProtocolHint" style="margin-top:12px;margin-bottom:0;display:none;color:#fca5a5;">
+          Estás en file://. Cierra esta pestaña y abre la app con abrir-app.bat → http://127.0.0.1:8080/
+        </p>
+      </section>
+    </main>
+
+    <main id="screenPackers" class="screen">
+      <section class="panel">
+        <h1 class="panel-title">Empacadores del Turno</h1>
+        <p class="panel-desc">Selecciona quién trabaja en este turno. Solo los empacadores activos aparecerán en el tablero.</p>
+
+        <div class="toolbar-row">
+          <button class="btn btn-secondary" type="button" id="btnToggleAddPacker">Agregar Nuevo Empacador</button>
+          <button class="btn btn-ghost" type="button" id="btnSyncPackers">Sincronizar desde Sheets</button>
+        </div>
+
+        <div class="search-bar">
+          <div class="field-label" style="margin-bottom:0;">Buscar empacadores del turno</div>
+          <div class="search-mode" id="packerSearchModeGroup">
+            <label><input type="radio" name="packerSearchMode" value="code"> Código</label>
+            <label><input type="radio" name="packerSearchMode" value="name"> Nombre</label>
+            <label><input type="radio" name="packerSearchMode" value="both" checked> Ambos</label>
+          </div>
+          <input class="field-input" id="packerSearchInput" type="search" placeholder="Escribe código o nombre..." autocomplete="off">
+        </div>
+
+        <div class="subform-card" id="addPackerForm" hidden>
+          <h2 class="subform-title">Nuevo Empacador</h2>
+          <div class="form-row">
+            <div class="field-group">
+              <label class="field-label" for="newPackerCode">Código</label>
+              <input class="field-input" id="newPackerCode" type="text" maxlength="12" placeholder="Ej. E042">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="newPackerName">Identificación</label>
+              <input class="field-input" id="newPackerName" type="text" maxlength="80" placeholder="Nombre o alias">
+            </div>
+          </div>
+          <div class="toolbar-row">
+            <button class="btn btn-primary" type="button" id="btnSaveNewPacker">Guardar Empacador</button>
+            <button class="btn btn-ghost" type="button" id="btnCancelAddPacker">Cancelar</button>
+          </div>
+        </div>
+
+        <div class="packer-list" id="packerManageList"></div>
+
+        <div class="toolbar-row">
+          <button class="btn btn-primary btn-block" type="button" id="btnConfirmPackers">Confirmar y Abrir Tablero</button>
+        </div>
+      </section>
+    </main>
+
+    <main id="screenBoard" class="screen">
+      <section class="panel" style="flex:1;display:flex;flex-direction:column;">
+        <h1 class="panel-title">Tablero de Inspección</h1>
+        <p class="panel-desc">Selecciona el defecto detectado. El flujo te guiará hasta registrar al empacador responsable.</p>
+        <div class="btn-grid btn-grid-2" id="defectButtons"></div>
+        <div class="footer-bar">
+          <button class="btn-close-shift" type="button" id="btnCloseShift">Cerrar Turno</button>
+        </div>
+      </section>
+    </main>
+
+    <main id="screenFlow" class="screen">
+      <section class="panel">
+        <div class="flow-header">
+          <div class="flow-step" id="flowStepLabel">Paso 1</div>
+          <h1 class="panel-title" id="flowTitle">Opciones</h1>
+          <p class="panel-desc" id="flowDescription"></p>
+          <div class="flow-breadcrumb" id="flowBreadcrumb"></div>
+        </div>
+        <div class="btn-grid btn-grid-2" id="flowOptions"></div>
+        <div class="toolbar-row" style="margin-top:16px;">
+          <button class="btn btn-ghost" type="button" id="btnFlowBack">Regresar</button>
+          <button class="btn btn-secondary" type="button" id="btnFlowCancel">Cancelar</button>
+        </div>
+      </section>
+    </main>
+
+    <main id="screenPackerSelect" class="screen">
+      <section class="panel">
+        <div class="flow-header">
+          <div class="flow-step">Empacador</div>
+          <h1 class="panel-title">Seleccionar Empacador</h1>
+          <p class="panel-desc" id="packerSelectSummary">Identifica al empacador responsable del defecto.</p>
+          <div class="flow-breadcrumb" id="packerSelectBreadcrumb"></div>
+        </div>
+        <div class="search-bar">
+          <div class="search-mode" id="packerSelectSearchModeGroup">
+            <label><input type="radio" name="packerSelectSearchMode" value="code"> Código</label>
+            <label><input type="radio" name="packerSelectSearchMode" value="name"> Nombre</label>
+            <label><input type="radio" name="packerSelectSearchMode" value="both" checked> Ambos</label>
+          </div>
+          <input class="field-input" id="packerSelectSearchInput" type="search" placeholder="Buscar empacador activo..." autocomplete="off">
+        </div>
+        <div class="btn-grid btn-grid-2" id="packerSelectGrid"></div>
+        <div class="toolbar-row" style="margin-top:16px;">
+          <button class="btn btn-ghost" type="button" id="btnPackerBack">Regresar</button>
+          <button class="btn btn-secondary" type="button" id="btnPackerCancel">Cancelar</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="modal-overlay" id="modalCloseShift">
+    <div class="modal-card">
+      <h2 class="modal-title">Cerrar Turno</h2>
+      <p class="modal-text">¿Confirmas el cierre del turno? Se perderán los contadores locales de errores y deberás iniciar un nuevo turno con supervisor.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCancelCloseShift">Cancelar</button>
+        <button class="btn btn-danger" type="button" id="btnConfirmCloseShift">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalAlert3">
+    <div class="modal-card">
+      <h2 class="modal-title" style="color:#fca5a5;">Alerta · 3 Errores</h2>
+      <p class="modal-text" id="alert3Text"></p>
+      <button class="btn btn-primary btn-block" type="button" id="btnDismissAlert3">Entendido</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var CONFIG = {
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbzF7xku3J5aCiAzKNQFuXt0QLkW-eGBSkHIS4ci6k4n7gSfAJGXOTuNDKnfvTq8Q4Rd/exec",
+        alertEmails: ["calidad@soaz.com", "supervision@soaz.com"],
+        operationalDayStartHour: 16,
+        storageKeys: {
+          packers: "soaz_packer_catalog_v1",
+          pendingQueue: "soaz_pending_records_v1",
+          shiftDraft: "soaz_shift_draft_v1",
+          searchMode: "soaz_packer_search_mode_v1"
+        }
+      };
+
+      var DEFAULT_PACKERS = [];
+
+      var DEFECTS = [
+        { id: "mal_pesado", label: "Mal Pesado", hint: "Peso arriba, abajo o omitir detalle", critical: false },
+        { id: "pudricion", label: "Pudrición", hint: "Fruta en deterioro", critical: false },
+        { id: "tallones", label: "Tallones", hint: "Daño por tallo", critical: false },
+        { id: "calibre_revuelto", label: "Calibre Revuelto", hint: "Calibre predominante y mezclado", critical: false },
+        { id: "colores_mixtos", label: "Colores Mixtos", hint: "Color predominante y mezclado", critical: false },
+        { id: "mal_acomodo", label: "Mal Acomodo", hint: "Alerta crítica de acomodo", critical: true },
+        { id: "mal_envuelto", label: "Mal Envuelto", hint: "Empaque deficiente", critical: false }
+      ];
+
+      var state = {
+        supervisor: "",
+        shiftStartedAt: null,
+        operationalDay: "",
+        activePackerCodes: [],
+        packerCatalog: [],
+        errorCounts: {},
+        errorHistory: {},
+        alertSent: {},
+        currentFlow: null,
+        flowStack: [],
+        pendingQueue: [],
+        isSyncing: false,
+        isRegistering: false,
+        packerSearchQuery: "",
+        packerSearchMode: "both",
+        packerSelectSearchQuery: "",
+        packerSelectSearchMode: "both",
+        shiftMarkerSent: false
+      };
+
+      var dom = {};
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+
+      function pad2(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function formatDateKey(date) {
+        return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate());
+      }
+
+      function formatDisplayDate(dateKey) {
+        var parts = dateKey.split("-");
+        return parts[2] + "/" + parts[1] + "/" + parts[0];
+      }
+
+      function getOperationalDay(date) {
+        var reference = new Date(date.getTime());
+        if (reference.getHours() < CONFIG.operationalDayStartHour) {
+          reference.setDate(reference.getDate() - 1);
+        }
+        return formatDateKey(reference);
+      }
+
+      function nowIso() {
+        return new Date().toISOString();
+      }
+
+      function loadJson(key, fallback) {
+        try {
+          var raw = localStorage.getItem(key);
+          if (!raw) {
+            return fallback;
+          }
+          return JSON.parse(raw);
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      function saveJson(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+
+      function showToast(message, type) {
+        var container = dom.toastContainer;
+        var toast = document.createElement("div");
+        toast.className = "toast " + (type || "info");
+        toast.textContent = message;
+        container.appendChild(toast);
+        window.setTimeout(function () {
+          toast.remove();
+        }, 3600);
+      }
+
+      function updateSyncBanner() {
+        if (state.pendingQueue.length > 0) {
+          dom.syncBanner.classList.add("visible");
+          dom.syncBannerText.textContent = "Registros pendientes: " + state.pendingQueue.length + ". Pulsa Reintentar envío para mandarlos a Google Sheets.";
+        } else {
+          dom.syncBanner.classList.remove("visible");
+        }
+      }
+
+      function setConnectionStatus(mode) {
+        var el = dom.connectionStatus;
+        el.className = "status-pill " + mode;
+        if (mode === "online") {
+          el.textContent = "API lista";
+        } else if (mode === "syncing") {
+          el.textContent = "Sincronizando";
+        } else {
+          el.textContent = "Modo local";
+        }
+      }
+
+      function updateHeader() {
+        dom.supervisorDisplay.textContent = state.supervisor || "Sin supervisor";
+        dom.operationalDayDisplay.textContent = "Día operativo " + (state.operationalDay ? formatDisplayDate(state.operationalDay) : "—");
+      }
+
+      function showScreen(screenId) {
+        var screens = document.querySelectorAll(".screen");
+        for (var i = 0; i < screens.length; i += 1) {
+          screens[i].classList.remove("active");
+        }
+        byId(screenId).classList.add("active");
+      }
+
+      function getPackerByCode(code) {
+        for (var i = 0; i < state.packerCatalog.length; i += 1) {
+          if (state.packerCatalog[i].code === code) {
+            return state.packerCatalog[i];
+          }
+        }
+        return null;
+      }
+
+      function getActivePackers() {
+        var seen = {};
+        var result = [];
+        for (var i = 0; i < state.activePackerCodes.length; i += 1) {
+          var code = state.activePackerCodes[i];
+          if (seen[code]) {
+            continue;
+          }
+          seen[code] = true;
+          var packer = getPackerByCode(code);
+          if (packer && packer.active !== false) {
+            result.push(packer);
+          }
+        }
+        result.sort(function (a, b) {
+          return a.code.localeCompare(b.code);
+        });
+        return result;
+      }
+
+      function dedupeActivePackerCodes() {
+        var seen = {};
+        var clean = [];
+        for (var i = 0; i < state.activePackerCodes.length; i += 1) {
+          var code = state.activePackerCodes[i];
+          if (!seen[code]) {
+            seen[code] = true;
+            clean.push(code);
+          }
+        }
+        state.activePackerCodes = clean;
+      }
+
+      function deletePackerPermanently(code) {
+        var packer = getPackerByCode(code);
+        var label = packer ? (packer.code + " · " + packer.name) : code;
+        var confirmed = window.confirm("¿Eliminar permanentemente al empacador " + label + "?\nSe borrará de la base compartida (Google Sheets).");
+        if (!confirmed) {
+          return;
+        }
+
+        apiRequest({
+          action: "delete_packer",
+          packerCode: code
+        }).then(function (data) {
+          applyPackerCatalog(data.packers || []);
+          var idx = state.activePackerCodes.indexOf(code);
+          if (idx !== -1) {
+            state.activePackerCodes.splice(idx, 1);
+          }
+          delete state.errorCounts[code];
+          delete state.errorHistory[code];
+          delete state.alertSent[code];
+          saveShiftDraft();
+          renderPackerManageList();
+          showToast("Empacador " + code + " eliminado de la base compartida.", "info");
+        }).catch(function (error) {
+          showToast(error.message || "No se pudo eliminar en Sheets", "error");
+        });
+      }
+
+      function applyPackerCatalog(packers) {
+        state.packerCatalog = (packers || []).map(function (item) {
+          return {
+            code: String(item.code || "").trim().toUpperCase(),
+            name: String(item.name || "").trim(),
+            active: item.active !== false
+          };
+        }).filter(function (item) {
+          return Boolean(item.code);
+        });
+        savePackerCatalog();
+      }
+
+      function refreshPackersFromCloud(showMessages) {
+        return apiRequest({ action: "list_packers" }).then(function (data) {
+          applyPackerCatalog(data.packers || []);
+          // Quitar del turno códigos que ya no existen en la base
+          state.activePackerCodes = state.activePackerCodes.filter(function (code) {
+            return Boolean(getPackerByCode(code));
+          });
+          renderPackerManageList();
+          if (showMessages) {
+            showToast("Empacadores sincronizados (" + state.packerCatalog.length + ").", "success");
+          }
+          return data;
+        }).catch(function (error) {
+          if (showMessages) {
+            showToast("Sin nube: usando lista local. " + (error.message || ""), "info");
+          }
+          renderPackerManageList();
+          throw error;
+        });
+      }
+
+      function savePackerCatalog() {
+        saveJson(CONFIG.storageKeys.packers, state.packerCatalog);
+      }
+
+      function savePendingQueue() {
+        saveJson(CONFIG.storageKeys.pendingQueue, state.pendingQueue);
+        updateSyncBanner();
+      }
+
+      function saveShiftDraft() {
+        saveJson(CONFIG.storageKeys.shiftDraft, {
+          supervisor: state.supervisor,
+          shiftStartedAt: state.shiftStartedAt,
+          operationalDay: state.operationalDay,
+          activePackerCodes: state.activePackerCodes,
+          errorCounts: state.errorCounts,
+          errorHistory: state.errorHistory,
+          alertSent: state.alertSent,
+          shiftMarkerSent: state.shiftMarkerSent
+        });
+      }
+
+      function loadShiftDraft() {
+        var draft = loadJson(CONFIG.storageKeys.shiftDraft, null);
+        if (!draft || !draft.supervisor) {
+          return false;
+        }
+        state.supervisor = draft.supervisor;
+        state.shiftStartedAt = draft.shiftStartedAt;
+        state.operationalDay = draft.operationalDay;
+        state.activePackerCodes = draft.activePackerCodes || [];
+        state.errorCounts = draft.errorCounts || {};
+        state.errorHistory = draft.errorHistory || {};
+        state.alertSent = draft.alertSent || {};
+        state.shiftMarkerSent = Boolean(draft.shiftMarkerSent);
+        return true;
+      }
+
+      function resetShiftState() {
+        state.supervisor = "";
+        state.shiftStartedAt = null;
+        state.operationalDay = "";
+        state.activePackerCodes = [];
+        state.errorCounts = {};
+        state.errorHistory = {};
+        state.alertSent = {};
+        state.currentFlow = null;
+        state.flowStack = [];
+        state.isRegistering = false;
+        state.shiftMarkerSent = false;
+        localStorage.removeItem(CONFIG.storageKeys.shiftDraft);
+      }
+
+      function normalizeSearch(text) {
+        return String(text || "")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+      }
+
+      function packerMatchesSearch(packer, query, mode) {
+        if (!query) {
+          return true;
+        }
+        var q = normalizeSearch(query);
+        var code = normalizeSearch(packer.code);
+        var name = normalizeSearch(packer.name);
+        if (mode === "code") {
+          return code.indexOf(q) !== -1;
+        }
+        if (mode === "name") {
+          return name.indexOf(q) !== -1;
+        }
+        return code.indexOf(q) !== -1 || name.indexOf(q) !== -1;
+      }
+
+      function getSelectedSearchMode(groupName) {
+        var selected = document.querySelector('input[name="' + groupName + '"]:checked');
+        return selected ? selected.value : "both";
+      }
+
+      function setSearchModeRadios(groupName, mode) {
+        var radios = document.querySelectorAll('input[name="' + groupName + '"]');
+        for (var i = 0; i < radios.length; i += 1) {
+          radios[i].checked = radios[i].value === mode;
+        }
+      }
+
+      function renderPackerManageList() {
+        var container = dom.packerManageList;
+        container.innerHTML = "";
+
+        if (state.packerCatalog.length === 0) {
+          container.innerHTML = '<div class="empty-state">No hay empacadores registrados.</div>';
+          return;
+        }
+
+        var query = state.packerSearchQuery;
+        var mode = state.packerSearchMode || "both";
+        var sorted = state.packerCatalog.slice().filter(function (packer) {
+          return packerMatchesSearch(packer, query, mode);
+        }).sort(function (a, b) {
+          return a.code.localeCompare(b.code);
+        });
+
+        if (sorted.length === 0) {
+          container.innerHTML = '<div class="empty-state">Ningún empacador coincide con la búsqueda.</div>';
+          return;
+        }
+
+        for (var i = 0; i < sorted.length; i += 1) {
+          var packer = sorted[i];
+          var row = document.createElement("div");
+          row.className = "packer-row" + (packer.active === false ? " inactive" : "");
+
+          var info = document.createElement("div");
+          info.className = "packer-row-info";
+
+          var codeEl = document.createElement("div");
+          codeEl.className = "packer-row-code";
+          codeEl.textContent = packer.code;
+
+          var nameEl = document.createElement("div");
+          nameEl.className = "packer-row-name";
+          nameEl.textContent = packer.name;
+
+          info.appendChild(codeEl);
+          info.appendChild(nameEl);
+
+          var toggleLabel = document.createElement("label");
+          toggleLabel.className = "checkbox-wrap";
+          var checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = state.activePackerCodes.indexOf(packer.code) !== -1 && packer.active !== false;
+          checkbox.disabled = packer.active === false;
+          checkbox.dataset.code = packer.code;
+          checkbox.addEventListener("change", function (event) {
+            var code = event.target.dataset.code;
+            var index = state.activePackerCodes.indexOf(code);
+            if (event.target.checked && index === -1) {
+              state.activePackerCodes.push(code);
+            }
+            if (!event.target.checked && index !== -1) {
+              state.activePackerCodes.splice(index, 1);
+            }
+          });
+          toggleLabel.appendChild(checkbox);
+          toggleLabel.appendChild(document.createTextNode("En turno"));
+
+          var toggleActiveBtn = document.createElement("button");
+          toggleActiveBtn.className = "btn btn-secondary";
+          toggleActiveBtn.type = "button";
+          toggleActiveBtn.textContent = packer.active === false ? "Activar" : "Desactivar";
+          toggleActiveBtn.dataset.code = packer.code;
+          toggleActiveBtn.addEventListener("click", function (event) {
+            var targetCode = event.currentTarget.dataset.code;
+            var target = getPackerByCode(targetCode);
+            if (!target) {
+              return;
+            }
+            var nextActive = target.active === false;
+            apiRequest({
+              action: "upsert_packer",
+              packer: {
+                code: target.code,
+                name: target.name,
+                active: nextActive
+              }
+            }).then(function (data) {
+              applyPackerCatalog(data.packers || []);
+              if (!nextActive) {
+                var idx = state.activePackerCodes.indexOf(targetCode);
+                if (idx !== -1) {
+                  state.activePackerCodes.splice(idx, 1);
+                }
+              }
+              saveShiftDraft();
+              renderPackerManageList();
+              showToast(nextActive ? "Empacador activado en la base." : "Empacador desactivado en la base.", "success");
+            }).catch(function (error) {
+              showToast(error.message || "No se pudo actualizar en Sheets", "error");
+            });
+          });
+
+          var deleteBtn = document.createElement("button");
+          deleteBtn.className = "btn-delete-packer";
+          deleteBtn.type = "button";
+          deleteBtn.textContent = "Quitar";
+          deleteBtn.dataset.code = packer.code;
+          deleteBtn.addEventListener("click", function (event) {
+            deletePackerPermanently(event.currentTarget.dataset.code);
+          });
+
+          row.appendChild(info);
+          row.appendChild(toggleLabel);
+          row.appendChild(toggleActiveBtn);
+          row.appendChild(deleteBtn);
+          container.appendChild(row);
+        }
+      }
+
+      function renderDefectButtons() {
+        var container = dom.defectButtons;
+        container.innerHTML = "";
+
+        for (var i = 0; i < DEFECTS.length; i += 1) {
+          var defect = DEFECTS[i];
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "btn-defect" + (defect.critical ? " critical" : "");
+          button.dataset.defectId = defect.id;
+
+          var label = document.createElement("span");
+          label.className = "btn-defect-label";
+          label.textContent = defect.label;
+
+          var hint = document.createElement("span");
+          hint.className = "btn-defect-hint";
+          hint.textContent = defect.hint;
+
+          button.appendChild(label);
+          button.appendChild(hint);
+          button.addEventListener("click", function (event) {
+            startDefectFlow(event.currentTarget.dataset.defectId);
+          });
+          container.appendChild(button);
+        }
+      }
+
+      function createFlowContext(defectId) {
+        return {
+          defectId: defectId,
+          defectLabel: getDefectLabel(defectId),
+          details: {},
+          step: "init"
+        };
+      }
+
+      function getDefectLabel(defectId) {
+        for (var i = 0; i < DEFECTS.length; i += 1) {
+          if (DEFECTS[i].id === defectId) {
+            return DEFECTS[i].label;
+          }
+        }
+        return defectId;
+      }
+
+      function startDefectFlow(defectId) {
+        state.currentFlow = createFlowContext(defectId);
+        state.flowStack = [];
+        advanceFlow();
+      }
+
+      function advanceFlow() {
+        var flow = state.currentFlow;
+        if (!flow) {
+          return;
+        }
+
+        if (flow.defectId === "mal_pesado") {
+          if (!flow.details.peso) {
+            renderFlowStep({
+              stepLabel: "Paso 1 · Peso",
+              title: "Mal Pesado",
+              description: "Indica si el peso está arriba, abajo o omite el detalle.",
+              breadcrumb: flow.defectLabel,
+              options: [
+                { value: "peso_arriba", label: "Peso ↑", action: function () { flow.details.peso = "Peso ↑"; goToPackerSelect(); } },
+                { value: "peso_abajo", label: "Peso ↓", action: function () { flow.details.peso = "Peso ↓"; goToPackerSelect(); } },
+                { value: "skip", label: "Skip", action: function () { flow.details.peso = "Skip"; goToPackerSelect(); } }
+              ]
+            });
+            return;
+          }
+        }
+
+        if (flow.defectId === "pudricion" || flow.defectId === "tallones" || flow.defectId === "mal_acomodo" || flow.defectId === "mal_envuelto") {
+          goToPackerSelect();
+          return;
+        }
+
+        if (flow.defectId === "calibre_revuelto") {
+          if (!flow.details.calibrePredominante) {
+            renderFlowStep({
+              stepLabel: "Paso 1 · Calibre",
+              title: "Calibre Predominante",
+              description: "Selecciona el calibre predominante o usa Skip para ir directo al empacador.",
+              breadcrumb: flow.defectLabel,
+              options: [
+                { value: "6", label: "6", action: function () { flow.details.calibrePredominante = "6"; advanceFlow(); } },
+                { value: "8", label: "8", action: function () { flow.details.calibrePredominante = "8"; advanceFlow(); } },
+                { value: "12", label: "12", action: function () { flow.details.calibrePredominante = "12"; advanceFlow(); } },
+                { value: "16", label: "16", action: function () { flow.details.calibrePredominante = "16"; advanceFlow(); } },
+                { value: "skip", label: "Skip", action: function () { flow.details.calibrePredominante = "Skip"; goToPackerSelect(); } }
+              ],
+              gridClass: "btn-grid-3"
+            });
+            return;
+          }
+
+          if (flow.details.calibrePredominante !== "Skip" && !flow.details.calibreMezclado) {
+            renderFlowStep({
+              stepLabel: "Paso 2 · Calibre",
+              title: "Calibre Mezclado",
+              description: "Selecciona el calibre mezclado detectado en la caja.",
+              breadcrumb: flow.defectLabel + " · Predominante " + flow.details.calibrePredominante,
+              options: [
+                { value: "6", label: "6", action: function () { flow.details.calibreMezclado = "6"; goToPackerSelect(); } },
+                { value: "8", label: "8", action: function () { flow.details.calibreMezclado = "8"; goToPackerSelect(); } },
+                { value: "12", label: "12", action: function () { flow.details.calibreMezclado = "12"; goToPackerSelect(); } },
+                { value: "16", label: "16", action: function () { flow.details.calibreMezclado = "16"; goToPackerSelect(); } }
+              ],
+              gridClass: "btn-grid-4"
+            });
+            return;
+          }
+        }
+
+        if (flow.defectId === "colores_mixtos") {
+          if (!flow.details.colorPredominante) {
+            renderFlowStep({
+              stepLabel: "Paso 1 · Color",
+              title: "Color Predominante",
+              description: "Selecciona el color predominante o usa Skip para ir directo al empacador.",
+              breadcrumb: flow.defectLabel,
+              options: [
+                { value: "1/2", label: "1/2", action: function () { flow.details.colorPredominante = "1/2"; advanceFlow(); } },
+                { value: "3/4", label: "3/4", action: function () { flow.details.colorPredominante = "3/4"; advanceFlow(); } },
+                { value: "madura", label: "Madura", action: function () { flow.details.colorPredominante = "Madura"; advanceFlow(); } },
+                { value: "skip", label: "Skip", action: function () { flow.details.colorPredominante = "Skip"; goToPackerSelect(); } }
+              ],
+              gridClass: "btn-grid-2"
+            });
+            return;
+          }
+
+          if (flow.details.colorPredominante !== "Skip" && !flow.details.colorMezclado) {
+            renderFlowStep({
+              stepLabel: "Paso 2 · Color",
+              title: "Color Mezclado",
+              description: "Selecciona el color mezclado detectado en la caja.",
+              breadcrumb: flow.defectLabel + " · Predominante " + flow.details.colorPredominante,
+              options: [
+                { value: "1/2", label: "1/2", action: function () { flow.details.colorMezclado = "1/2"; goToPackerSelect(); } },
+                { value: "3/4", label: "3/4", action: function () { flow.details.colorMezclado = "3/4"; goToPackerSelect(); } },
+                { value: "madura", label: "Madura", action: function () { flow.details.colorMezclado = "Madura"; goToPackerSelect(); } }
+              ],
+              gridClass: "btn-grid-3"
+            });
+            return;
+          }
+        }
+
+        goToPackerSelect();
+      }
+
+      function renderFlowStep(config) {
+        dom.flowStepLabel.textContent = config.stepLabel;
+        dom.flowTitle.textContent = config.title;
+        dom.flowDescription.textContent = config.description;
+        dom.flowBreadcrumb.innerHTML = config.breadcrumb ? "Ruta: <span>" + config.breadcrumb + "</span>" : "";
+
+        dom.flowOptions.className = "btn-grid " + (config.gridClass || "btn-grid-2");
+        dom.flowOptions.innerHTML = "";
+
+        for (var i = 0; i < config.options.length; i += 1) {
+          var option = config.options[i];
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "btn-option";
+          button.textContent = option.label;
+          button.addEventListener("click", function (event) {
+            var index = Number(event.currentTarget.dataset.index);
+            config.options[index].action();
+          });
+          button.dataset.index = String(i);
+          dom.flowOptions.appendChild(button);
+        }
+
+        showScreen("screenFlow");
+      }
+
+      function buildFlowSummary() {
+        var flow = state.currentFlow;
+        if (!flow) {
+          return "";
+        }
+
+        var parts = [flow.defectLabel];
+
+        if (flow.details.peso) {
+          parts.push(flow.details.peso);
+        }
+        if (flow.details.calibrePredominante) {
+          parts.push("Predominante " + flow.details.calibrePredominante);
+        }
+        if (flow.details.calibreMezclado) {
+          parts.push("Mezclado " + flow.details.calibreMezclado);
+        }
+        if (flow.details.colorPredominante) {
+          parts.push("Predominante " + flow.details.colorPredominante);
+        }
+        if (flow.details.colorMezclado) {
+          parts.push("Mezclado " + flow.details.colorMezclado);
+        }
+
+        return parts.join(" · ");
+      }
+
+      function goToPackerSelect() {
+        var activePackers = getActivePackers();
+        if (activePackers.length === 0) {
+          showToast("No hay empacadores activos en el turno.", "error");
+          cancelFlow();
+          return;
+        }
+
+        if (dom.packerSelectSearchInput) {
+          dom.packerSelectSearchInput.value = state.packerSelectSearchQuery || "";
+        }
+        setSearchModeRadios("packerSelectSearchMode", state.packerSelectSearchMode || "both");
+
+        dom.packerSelectSummary.textContent = "Registra al empacador responsable del defecto detectado.";
+        dom.packerSelectBreadcrumb.innerHTML = "Defecto: <span>" + buildFlowSummary() + "</span>";
+
+        renderPackerSelectGrid(activePackers);
+        showScreen("screenPackerSelect");
+      }
+
+      function renderPackerSelectGrid(activePackers) {
+        var list = activePackers || getActivePackers();
+        var query = state.packerSelectSearchQuery;
+        var mode = state.packerSelectSearchMode || "both";
+        var filtered = list.filter(function (packer) {
+          return packerMatchesSearch(packer, query, mode);
+        });
+
+        dom.packerSelectGrid.innerHTML = "";
+
+        if (filtered.length === 0) {
+          var empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.style.gridColumn = "1 / -1";
+          empty.textContent = "Ningún empacador coincide con la búsqueda.";
+          dom.packerSelectGrid.appendChild(empty);
+          return;
+        }
+
+        for (var i = 0; i < filtered.length; i += 1) {
+          var packer = filtered[i];
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "btn-packer";
+
+          var codeEl = document.createElement("span");
+          codeEl.className = "btn-packer-code";
+          codeEl.textContent = packer.code;
+
+          var nameEl = document.createElement("span");
+          nameEl.className = "btn-packer-name";
+          nameEl.textContent = packer.name;
+
+          button.appendChild(codeEl);
+          button.appendChild(nameEl);
+
+          var errorCount = state.errorCounts[packer.code] || 0;
+          if (errorCount > 0) {
+            var errorsEl = document.createElement("span");
+            errorsEl.className = "btn-packer-errors";
+            errorsEl.textContent = "Errores en turno: " + errorCount;
+            button.appendChild(errorsEl);
+          }
+
+          button.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            var selectedCode = event.currentTarget.dataset.code;
+            registerInspection(selectedCode);
+          });
+          button.dataset.code = packer.code;
+          dom.packerSelectGrid.appendChild(button);
+        }
+      }
+
+      function buildRecordPayload(packerCode) {
+        var flow = state.currentFlow;
+        var packer = getPackerByCode(packerCode);
+        var summary = buildFlowSummary();
+
+        return {
+          action: "register_inspection",
+          recordId: "rec_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+          timestamp: nowIso(),
+          operationalDay: state.operationalDay,
+          shiftStartedAt: state.shiftStartedAt,
+          supervisor: state.supervisor,
+          defectId: flow.defectId,
+          defectLabel: flow.defectLabel,
+          details: Object.assign({}, flow.details),
+          summary: summary,
+          packerCode: packerCode,
+          packerName: packer ? packer.name : "",
+          alertEmails: CONFIG.alertEmails
+        };
+      }
+
+      function buildErrorLabel(record) {
+        var label = record.defectLabel;
+        if (record.details.peso) {
+          label += " (" + record.details.peso + ")";
+        }
+        if (record.details.calibrePredominante && record.details.calibrePredominante !== "Skip") {
+          label += " · Cal " + record.details.calibrePredominante;
+          if (record.details.calibreMezclado) {
+            label += "/" + record.details.calibreMezclado;
+          }
+        }
+        if (record.details.colorPredominante && record.details.colorPredominante !== "Skip") {
+          label += " · Col " + record.details.colorPredominante;
+          if (record.details.colorMezclado) {
+            label += "/" + record.details.colorMezclado;
+          }
+        }
+        return label;
+      }
+
+      function incrementPackerErrors(packerCode, record) {
+        if (!state.errorCounts[packerCode]) {
+          state.errorCounts[packerCode] = 0;
+        }
+        if (!state.errorHistory[packerCode]) {
+          state.errorHistory[packerCode] = [];
+        }
+
+        state.errorCounts[packerCode] += 1;
+        state.errorHistory[packerCode].push(buildErrorLabel(record));
+
+        if (state.errorCounts[packerCode] >= 3 && !state.alertSent[packerCode]) {
+          state.alertSent[packerCode] = true;
+          triggerThreeErrorAlert(packerCode);
+        }
+      }
+
+      function triggerThreeErrorAlert(packerCode) {
+        var packer = getPackerByCode(packerCode);
+        var errors = (state.errorHistory[packerCode] || []).slice(0, 3);
+        var message = "Empacador " + packerCode + (packer ? " (" + packer.name + ")" : "") +
+          " acumuló 3 errores en el turno.\n\n" +
+          "Supervisor: " + state.supervisor + "\n\n" +
+          "Errores:\n1. " + (errors[0] || "—") + "\n2. " + (errors[1] || "—") + "\n3. " + (errors[2] || "—");
+
+        dom.alert3Text.textContent = message;
+        dom.modalAlert3.classList.add("open");
+
+        var alertPayload = {
+          action: "send_alert",
+          alertId: "alert_" + Date.now() + "_" + packerCode,
+          timestamp: nowIso(),
+          operationalDay: state.operationalDay,
+          supervisor: state.supervisor,
+          packerCode: packerCode,
+          packerName: packer ? packer.name : "",
+          errors: errors,
+          emails: CONFIG.alertEmails
+        };
+
+        sendToApi(alertPayload).catch(function () {
+          state.pendingQueue.push(alertPayload);
+          savePendingQueue();
+        });
+      }
+
+      function registerInspection(packerCode) {
+        if (state.isRegistering) {
+          return;
+        }
+        if (!state.currentFlow) {
+          return;
+        }
+
+        state.isRegistering = true;
+
+        var packerButtons = dom.packerSelectGrid.querySelectorAll("button");
+        for (var b = 0; b < packerButtons.length; b += 1) {
+          packerButtons[b].disabled = true;
+        }
+
+        var record = buildRecordPayload(packerCode);
+        incrementPackerErrors(packerCode, record);
+        saveShiftDraft();
+
+        var flowToClear = state.currentFlow;
+        state.currentFlow = null;
+        state.flowStack = [];
+
+        sendToApi(record).then(function () {
+          showToast("Registro guardado · " + packerCode, "success");
+        }).catch(function () {
+          state.pendingQueue.push(record);
+          savePendingQueue();
+          showToast("Registro en cola local · " + packerCode, "info");
+        }).finally(function () {
+          state.isRegistering = false;
+          if (flowToClear) {
+            showScreen("screenBoard");
+          }
+        });
+      }
+
+      function isApiConfigured() {
+        return Boolean(CONFIG.apiBaseUrl) && CONFIG.apiBaseUrl.indexOf("script.google.com") !== -1;
+      }
+
+      /**
+       * JSONP: permite LEER respuestas de Apps Script desde cualquier origen
+       * (necesario para sincronizar empacadores entre PC/iPad).
+       */
+      function apiRequest(payload) {
+        return new Promise(function (resolve, reject) {
+          if (!isApiConfigured()) {
+            reject(new Error("API no configurada"));
+            return;
+          }
+          if (!navigator.onLine) {
+            reject(new Error("Sin conexión a internet"));
+            return;
+          }
+          if (window.location.protocol === "file:") {
+            reject(new Error("Abriste file://. Usa http://127.0.0.1:8080/ o la URL publicada"));
+            return;
+          }
+
+          var cbName = "soazJsonp_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
+          var script = document.createElement("script");
+          var settled = false;
+
+          var timer = window.setTimeout(function () {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            reject(new Error("Timeout al contactar Google Sheets"));
+          }, 20000);
+
+          function cleanup() {
+            window.clearTimeout(timer);
+            try {
+              delete window[cbName];
+            } catch (ignoreDelete) {
+              window[cbName] = undefined;
+            }
+            if (script.parentNode) {
+              script.parentNode.removeChild(script);
+            }
+          }
+
+          window[cbName] = function (data) {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            if (!data || data.ok === false) {
+              reject(new Error((data && data.error) || "Error en Google Sheets"));
+              return;
+            }
+            resolve(data);
+          };
+
+          script.onerror = function () {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            reject(new Error("No se pudo conectar con Google Sheets"));
+          };
+
+          script.src = CONFIG.apiBaseUrl +
+            "?payload=" + encodeURIComponent(JSON.stringify(payload)) +
+            "&callback=" + encodeURIComponent(cbName) +
+            "&_ts=" + Date.now();
+          document.body.appendChild(script);
+        });
+      }
+
+      function sendToApi(payload) {
+        return apiRequest(payload);
+      }
+
+      function buildGasGetUrl(payload) {
+        return CONFIG.apiBaseUrl +
+          "?payload=" + encodeURIComponent(JSON.stringify(payload)) +
+          "&_ts=" + Date.now();
+      }
+
+      function handleTestSheet() {
+        if (window.location.protocol === "file:") {
+          showToast("Primero abre la app con abrir-app.bat (http://127.0.0.1:8080/)", "error");
+          return;
+        }
+
+        var testPayload = {
+          action: "register_inspection",
+          recordId: "webtest_" + Date.now(),
+          timestamp: nowIso(),
+          operationalDay: getOperationalDay(new Date()),
+          supervisor: "Prueba Web",
+          defectId: "mal_pesado",
+          defectLabel: "Mal Pesado",
+          details: { peso: "Peso ↑" },
+          summary: "Prueba desde la página web",
+          packerCode: "E001",
+          packerName: "Ana Ruiz",
+          alertEmails: CONFIG.alertEmails
+        };
+
+        var url = buildGasGetUrl(testPayload);
+        window.open(url, "_blank");
+        showToast("Se abrió la prueba. Si ves {\"ok\":true}, revisa Inspecciones en el Sheet.", "info");
+
+        sendToApi(testPayload).then(function () {
+          showToast("Beacon enviado. Revisa la pestaña Inspecciones.", "success");
+        }).catch(function (error) {
+          showToast(error.message || "Falló la prueba web", "error");
+        });
+      }
+
+      function flushPendingQueue() {
+        if (state.isSyncing || state.pendingQueue.length === 0 || !isApiConfigured()) {
+          updateSyncBanner();
+          return;
+        }
+
+        if (!navigator.onLine) {
+          setConnectionStatus("offline");
+          updateSyncBanner();
+          showToast("Sin internet. No se puede sincronizar ahora.", "error");
+          return;
+        }
+
+        state.isSyncing = true;
+        setConnectionStatus("syncing");
+
+        var queueCopy = state.pendingQueue.slice();
+        var index = 0;
+        var sentCount = 0;
+
+        function processNext() {
+          if (index >= queueCopy.length) {
+            state.pendingQueue = [];
+            savePendingQueue();
+            state.isSyncing = false;
+            setConnectionStatus("online");
+            if (sentCount > 0) {
+              showToast("Cola enviada a Google Sheets (" + sentCount + ").", "success");
+            }
+            return;
+          }
+
+          sendToApi(queueCopy[index]).then(function () {
+            sentCount += 1;
+            index += 1;
+            processNext();
+          }).catch(function (error) {
+            state.pendingQueue = queueCopy.slice(index);
+            savePendingQueue();
+            state.isSyncing = false;
+            setConnectionStatus("offline");
+            showToast("Sincronización detenida: " + (error && error.message ? error.message : "error de red"), "error");
+          });
+        }
+
+        processNext();
+      }
+
+      function clearPendingQueue() {
+        if (state.pendingQueue.length === 0) {
+          return;
+        }
+        var confirmed = window.confirm("¿Vaciar " + state.pendingQueue.length + " registros pendientes? No se enviarán a Google Sheets.");
+        if (!confirmed) {
+          return;
+        }
+        state.pendingQueue = [];
+        savePendingQueue();
+        showToast("Cola local vaciada.", "info");
+      }
+
+      function cancelFlow() {
+        state.currentFlow = null;
+        state.flowStack = [];
+        showScreen("screenBoard");
+      }
+
+      function undoLastFlowDetail() {
+        var flow = state.currentFlow;
+        if (!flow) {
+          return false;
+        }
+
+        if (flow.defectId === "mal_pesado" && flow.details.peso) {
+          delete flow.details.peso;
+          return true;
+        }
+
+        if (flow.defectId === "calibre_revuelto") {
+          if (flow.details.calibreMezclado) {
+            delete flow.details.calibreMezclado;
+            return true;
+          }
+          if (flow.details.calibrePredominante) {
+            delete flow.details.calibrePredominante;
+            return true;
+          }
+        }
+
+        if (flow.defectId === "colores_mixtos") {
+          if (flow.details.colorMezclado) {
+            delete flow.details.colorMezclado;
+            return true;
+          }
+          if (flow.details.colorPredominante) {
+            delete flow.details.colorPredominante;
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      function flowBackFromOptions() {
+        if (!state.currentFlow) {
+          showScreen("screenBoard");
+          return;
+        }
+        if (undoLastFlowDetail()) {
+          advanceFlow();
+          return;
+        }
+        cancelFlow();
+      }
+
+      function flowBackFromPacker() {
+        if (!state.currentFlow) {
+          showScreen("screenBoard");
+          return;
+        }
+        if (undoLastFlowDetail()) {
+          advanceFlow();
+          return;
+        }
+        cancelFlow();
+      }
+
+      function handleSupervisorSubmit(event) {
+        event.preventDefault();
+        var nameInput = dom.supervisorName;
+        var name = nameInput.value.trim();
+        if (!name) {
+          showToast("El nombre del supervisor es obligatorio.", "error");
+          return;
+        }
+
+        state.supervisor = name;
+        state.shiftStartedAt = nowIso();
+        state.operationalDay = getOperationalDay(new Date());
+        state.errorCounts = {};
+        state.errorHistory = {};
+        state.alertSent = {};
+        state.isRegistering = false;
+        state.currentFlow = null;
+        state.flowStack = [];
+        state.shiftMarkerSent = false;
+        state.packerSearchQuery = "";
+        if (dom.packerSearchInput) {
+          dom.packerSearchInput.value = "";
+        }
+        updateHeader();
+        showScreen("screenPackers");
+        renderPackerManageList();
+        refreshPackersFromCloud(true);
+      }
+
+      function handleConfirmPackers() {
+        dedupeActivePackerCodes();
+        if (getActivePackers().length === 0) {
+          showToast("Selecciona al menos un empacador activo.", "error");
+          return;
+        }
+
+        saveShiftDraft();
+        updateHeader();
+        showScreen("screenBoard");
+        showToast("Tablero habilitado. Turno iniciado.", "success");
+
+        if (!state.shiftMarkerSent) {
+          apiRequest({
+            action: "open_shift",
+            timestamp: nowIso(),
+            operationalDay: state.operationalDay,
+            shiftStartedAt: state.shiftStartedAt,
+            supervisor: state.supervisor,
+            activePackerCodes: state.activePackerCodes.slice(),
+            activePackerCount: state.activePackerCodes.length
+          }).then(function () {
+            state.shiftMarkerSent = true;
+            saveShiftDraft();
+          }).catch(function () {
+            showToast("Turno abierto localmente. No se pudo marcar en Sheets.", "info");
+          });
+        }
+      }
+
+      function toggleAddPackerForm(show) {
+        dom.addPackerForm.hidden = !show;
+        if (show) {
+          dom.newPackerCode.focus();
+        } else {
+          dom.newPackerCode.value = "";
+          dom.newPackerName.value = "";
+        }
+      }
+
+      function handleSaveNewPacker() {
+        var code = dom.newPackerCode.value.trim().toUpperCase();
+        var name = dom.newPackerName.value.trim();
+
+        if (!code || !name) {
+          showToast("Código e identificación son obligatorios.", "error");
+          return;
+        }
+
+        if (getPackerByCode(code)) {
+          showToast("Ya existe un empacador con ese código.", "error");
+          return;
+        }
+
+        apiRequest({
+          action: "upsert_packer",
+          packer: { code: code, name: name, active: true }
+        }).then(function (data) {
+          applyPackerCatalog(data.packers || []);
+          if (state.activePackerCodes.indexOf(code) === -1) {
+            state.activePackerCodes.push(code);
+          }
+          saveShiftDraft();
+          renderPackerManageList();
+          toggleAddPackerForm(false);
+          showToast("Empacador " + code + " guardado en la base compartida.", "success");
+        }).catch(function (error) {
+          showToast(error.message || "No se pudo guardar en Sheets", "error");
+        });
+      }
+
+      function handleCloseShift() {
+        dom.modalCloseShift.classList.add("open");
+      }
+
+      function confirmCloseShift() {
+        dom.modalCloseShift.classList.remove("open");
+        resetShiftState();
+        dom.supervisorName.value = "";
+        updateHeader();
+        showScreen("screenSupervisor");
+        showToast("Turno cerrado correctamente.", "info");
+      }
+
+      function registerServiceWorker() {
+        if (window.location.protocol === "file:") {
+          return;
+        }
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.register("sw.js").catch(function () {
+            // Silencioso: no es crítico para el registro en Sheets
+          });
+        }
+      }
+
+      function warnIfFileProtocol() {
+        if (window.location.protocol !== "file:") {
+          if (dom.fileProtocolHint) {
+            dom.fileProtocolHint.style.display = "none";
+          }
+          return;
+        }
+        showToast("Estás en file://. Cierra esto y abre con abrir-app.bat → http://127.0.0.1:8080/", "error");
+        if (dom.fileProtocolHint) {
+          dom.fileProtocolHint.style.display = "block";
+        }
+        if (dom.syncBanner && dom.syncBannerText) {
+          dom.syncBanner.classList.add("visible");
+          dom.syncBannerText.textContent = "MODO INCORRECTO: abriste index.html directo. Usa abrir-app.bat y entra a http://127.0.0.1:8080/";
+          if (dom.btnRetrySync) {
+            dom.btnRetrySync.style.display = "none";
+          }
+          if (dom.btnClearQueue) {
+            dom.btnClearQueue.style.display = "none";
+          }
+        }
+      }
+
+      function bindEvents() {
+        dom.supervisorForm.addEventListener("submit", handleSupervisorSubmit);
+        dom.btnConfirmPackers.addEventListener("click", handleConfirmPackers);
+        dom.btnToggleAddPacker.addEventListener("click", function () {
+          toggleAddPackerForm(dom.addPackerForm.hidden);
+        });
+        dom.btnSyncPackers.addEventListener("click", function () {
+          refreshPackersFromCloud(true);
+        });
+        if (dom.packerSearchInput) {
+          dom.packerSearchInput.addEventListener("input", function (event) {
+            state.packerSearchQuery = event.target.value;
+            renderPackerManageList();
+          });
+        }
+        if (dom.packerSearchModeGroup) {
+          dom.packerSearchModeGroup.addEventListener("change", function () {
+            state.packerSearchMode = getSelectedSearchMode("packerSearchMode");
+            localStorage.setItem(CONFIG.storageKeys.searchMode, state.packerSearchMode);
+            renderPackerManageList();
+          });
+        }
+        if (dom.packerSelectSearchInput) {
+          dom.packerSelectSearchInput.addEventListener("input", function (event) {
+            state.packerSelectSearchQuery = event.target.value;
+            renderPackerSelectGrid();
+          });
+        }
+        if (dom.packerSelectSearchModeGroup) {
+          dom.packerSelectSearchModeGroup.addEventListener("change", function () {
+            state.packerSelectSearchMode = getSelectedSearchMode("packerSelectSearchMode");
+            renderPackerSelectGrid();
+          });
+        }
+        dom.btnCancelAddPacker.addEventListener("click", function () {
+          toggleAddPackerForm(false);
+        });
+        dom.btnSaveNewPacker.addEventListener("click", handleSaveNewPacker);
+        dom.btnCloseShift.addEventListener("click", handleCloseShift);
+        dom.btnCancelCloseShift.addEventListener("click", function () {
+          dom.modalCloseShift.classList.remove("open");
+        });
+        dom.btnConfirmCloseShift.addEventListener("click", confirmCloseShift);
+        dom.btnDismissAlert3.addEventListener("click", function () {
+          dom.modalAlert3.classList.remove("open");
+        });
+        dom.btnFlowCancel.addEventListener("click", cancelFlow);
+        dom.btnPackerCancel.addEventListener("click", cancelFlow);
+        dom.btnFlowBack.addEventListener("click", flowBackFromOptions);
+        dom.btnPackerBack.addEventListener("click", flowBackFromPacker);
+        dom.btnRetrySync.addEventListener("click", function () {
+          flushPendingQueue();
+        });
+        dom.btnClearQueue.addEventListener("click", clearPendingQueue);
+        dom.btnTestSheet.addEventListener("click", handleTestSheet);
+
+        window.addEventListener("online", function () {
+          setConnectionStatus(isApiConfigured() ? "online" : "offline");
+          flushPendingQueue();
+        });
+
+        window.addEventListener("offline", function () {
+          setConnectionStatus("offline");
+        });
+      }
+
+      function initDomRefs() {
+        dom.supervisorForm = byId("supervisorForm");
+        dom.supervisorName = byId("supervisorName");
+        dom.supervisorDisplay = byId("supervisorDisplay");
+        dom.operationalDayDisplay = byId("operationalDayDisplay");
+        dom.connectionStatus = byId("connectionStatus");
+        dom.syncBanner = byId("syncBanner");
+        dom.syncBannerText = byId("syncBannerText");
+        dom.btnRetrySync = byId("btnRetrySync");
+        dom.btnClearQueue = byId("btnClearQueue");
+        dom.btnTestSheet = byId("btnTestSheet");
+        dom.fileProtocolHint = byId("fileProtocolHint");
+        dom.packerManageList = byId("packerManageList");
+        dom.addPackerForm = byId("addPackerForm");
+        dom.newPackerCode = byId("newPackerCode");
+        dom.newPackerName = byId("newPackerName");
+        dom.btnToggleAddPacker = byId("btnToggleAddPacker");
+        dom.btnSyncPackers = byId("btnSyncPackers");
+        dom.packerSearchInput = byId("packerSearchInput");
+        dom.packerSearchModeGroup = byId("packerSearchModeGroup");
+        dom.packerSelectSearchInput = byId("packerSelectSearchInput");
+        dom.packerSelectSearchModeGroup = byId("packerSelectSearchModeGroup");
+        dom.btnSaveNewPacker = byId("btnSaveNewPacker");
+        dom.btnCancelAddPacker = byId("btnCancelAddPacker");
+        dom.btnConfirmPackers = byId("btnConfirmPackers");
+        dom.defectButtons = byId("defectButtons");
+        dom.btnCloseShift = byId("btnCloseShift");
+        dom.flowStepLabel = byId("flowStepLabel");
+        dom.flowTitle = byId("flowTitle");
+        dom.flowDescription = byId("flowDescription");
+        dom.flowBreadcrumb = byId("flowBreadcrumb");
+        dom.flowOptions = byId("flowOptions");
+        dom.btnFlowBack = byId("btnFlowBack");
+        dom.btnFlowCancel = byId("btnFlowCancel");
+        dom.packerSelectSummary = byId("packerSelectSummary");
+        dom.packerSelectBreadcrumb = byId("packerSelectBreadcrumb");
+        dom.packerSelectGrid = byId("packerSelectGrid");
+        dom.btnPackerBack = byId("btnPackerBack");
+        dom.btnPackerCancel = byId("btnPackerCancel");
+        dom.toastContainer = byId("toastContainer");
+        dom.modalCloseShift = byId("modalCloseShift");
+        dom.modalAlert3 = byId("modalAlert3");
+        dom.alert3Text = byId("alert3Text");
+        dom.btnCancelCloseShift = byId("btnCancelCloseShift");
+        dom.btnConfirmCloseShift = byId("btnConfirmCloseShift");
+        dom.btnDismissAlert3 = byId("btnDismissAlert3");
+      }
+
+      function init() {
+        initDomRefs();
+        bindEvents();
+        registerServiceWorker();
+        warnIfFileProtocol();
+
+        state.packerCatalog = loadJson(CONFIG.storageKeys.packers, DEFAULT_PACKERS);
+        state.pendingQueue = loadJson(CONFIG.storageKeys.pendingQueue, []);
+        state.packerSearchMode = localStorage.getItem(CONFIG.storageKeys.searchMode) || "both";
+        state.packerSelectSearchMode = state.packerSearchMode;
+        setSearchModeRadios("packerSearchMode", state.packerSearchMode);
+        setSearchModeRadios("packerSelectSearchMode", state.packerSelectSearchMode);
+
+        renderDefectButtons();
+        updateSyncBanner();
+
+        if (loadShiftDraft()) {
+          updateHeader();
+          renderPackerManageList();
+          refreshPackersFromCloud(false).catch(function () {});
+          if (getActivePackers().length > 0) {
+            showScreen("screenBoard");
+          } else {
+            showScreen("screenPackers");
+          }
+        } else {
+          updateHeader();
+          showScreen("screenSupervisor");
+        }
+
+        if (isApiConfigured() && navigator.onLine) {
+          setConnectionStatus("online");
+          flushPendingQueue();
+        } else {
+          setConnectionStatus("offline");
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
