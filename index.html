@@ -479,7 +479,7 @@
     /* ---- Totals bar ---- */
     .totals-bar {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
       margin-bottom: 16px;
     }
@@ -537,6 +537,11 @@
       font-weight: 700;
     }
     .btn-qty:hover { border-color: var(--accent); color: var(--accent-hover); }
+    .btn-qty.selected {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #111827;
+    }
 
     .variant-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .btn-variant {
@@ -851,8 +856,8 @@
       <section class="panel" style="flex:1;display:flex;flex-direction:column;">
         <div class="flow-header">
           <div class="flow-step" id="detailedStepLabel">Count 0</div>
-          <h1 class="panel-title">Defectos de la Caja</h1>
-          <p class="panel-desc">Asigna papayas a cada defecto. Una papaya no puede repetirse en dos defectos.</p>
+          <h1 class="panel-title">Fruta Desviada</h1>
+          <p class="panel-desc">Selecciona únicamente cuántas papayas de la caja están mal.</p>
         </div>
 
         <div class="totals-bar" id="totalsBar"></div>
@@ -862,7 +867,7 @@
           <button class="btn btn-primary btn-block btn-submit" type="button" id="btnSubmitAudit">Submit</button>
           <div class="detailed-secondary">
             <button class="btn btn-ghost" type="button" id="btnChangeCount">Cambiar Count</button>
-            <button class="btn btn-ghost btn-clear" type="button" id="btnClearSelections">Borrar selecciones</button>
+            <button class="btn btn-ghost btn-clear" type="button" id="btnClearSelections">Borrar selección</button>
           </div>
         </div>
       </section>
@@ -909,8 +914,8 @@
 
   <div class="modal-overlay" id="modalClearSel">
     <div class="modal-card">
-      <h2 class="modal-title">Borrar Selecciones</h2>
-      <p class="modal-text">¿Deseas borrar todas las selecciones de esta auditoría?</p>
+      <h2 class="modal-title">Borrar Selección</h2>
+      <p class="modal-text">¿Deseas borrar la cantidad de fruta desviada?</p>
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" id="btnCancelClearSel">Cancelar</button>
         <button class="btn btn-danger" type="button" id="btnConfirmClearSel">Aceptar</button>
@@ -921,7 +926,7 @@
   <div class="modal-overlay" id="modalChangeCount">
     <div class="modal-card">
       <h2 class="modal-title">Cambiar Count</h2>
-      <p class="modal-text">Ya hay defectos capturados en esta caja. Cambiar el Count borrará esas selecciones. ¿Continuar?</p>
+      <p class="modal-text">Ya seleccionaste la cantidad de fruta desviada. Cambiar el Count borrará esa selección. ¿Continuar?</p>
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" id="btnCancelChangeCount">Cancelar</button>
         <button class="btn btn-danger" type="button" id="btnConfirmChangeCount">Aceptar</button>
@@ -965,18 +970,8 @@
         { id: "mal_envuelto", label: "Mal Envuelto", hint: "Empaque deficiente", critical: false }
       ];
 
-      // Modo detallado: lista vertical (Mal Pesado siempre al final).
-      var DETAILED_DEFECTS = [
-        { id: "pudricion", label: "Pudrición", type: "qty" },
-        { id: "tallones", label: "Tallones", type: "qty" },
-        { id: "calibre_revuelto", label: "Calibre Revuelto", type: "group", variants: ["6", "8", "12", "16"] },
-        { id: "colores_mixtos", label: "Colores Mixtos", type: "group", variants: ["1/2", "3/4", "Madura"] },
-        { id: "mal_acomodo", label: "Mal Acomodo", type: "qty" },
-        { id: "mal_envuelto", label: "Mal Envuelto", type: "qty" },
-        { id: "mal_pesado", label: "Mal Pesado", type: "weight" }
-      ];
-
-      var COUNT_OPTIONS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+      // Todos los Counts posibles, desde 5 hasta 20 papayas.
+      var COUNT_OPTIONS = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 
       var state = {
         token: "",
@@ -1521,7 +1516,7 @@
       /* ---------- Modo detallado: auditoría ---------- */
 
       function newAudit() {
-        return { auditId: uid("audit"), count: null, defects: {}, malPesado: null };
+        return { auditId: uid("audit"), count: null, diverted: null };
       }
 
       function startNewBox() {
@@ -1552,8 +1547,7 @@
       function pickCount(n) {
         if (!state.currentAudit) { state.currentAudit = newAudit(); }
         state.currentAudit.count = n;
-        state.currentAudit.defects = {};
-        state.currentAudit.malPesado = null;
+        state.currentAudit.diverted = null;
         state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         saveShiftDraft();
         renderDetailedScreen();
@@ -1563,40 +1557,23 @@
       function auditAssigned() {
         var audit = state.currentAudit;
         if (!audit) { return 0; }
-        var total = 0;
-        DETAILED_DEFECTS.forEach(function (def) {
-          var entry = audit.defects[def.id];
-          if (!entry) { return; }
-          if (def.type === "qty") { total += Number(entry.qty) || 0; }
-          if (def.type === "group" && entry.groups) {
-            entry.groups.forEach(function (g) { total += Number(g.qty) || 0; });
-          }
-        });
-        return total;
-      }
-
-      function auditAvailable() {
-        var audit = state.currentAudit;
-        if (!audit || audit.count == null) { return 0; }
-        return audit.count - auditAssigned();
+        return Number(audit.diverted) || 0;
       }
 
       function auditHasDefect() {
-        return auditAssigned() > 0 || Boolean(state.currentAudit && state.currentAudit.malPesado);
+        return auditAssigned() > 0;
       }
 
       function renderTotals() {
         var audit = state.currentAudit;
         var count = audit && audit.count != null ? audit.count : 0;
         var assigned = auditAssigned();
-        var available = count - assigned;
         var buenas = count - assigned;
         dom.detailedStepLabel.textContent = "Count " + count;
         dom.totalsBar.innerHTML = "";
         var cells = [
           { v: count, l: "Count total", cls: "" },
-          { v: assigned, l: "Con defecto", cls: "assigned" },
-          { v: available, l: "Disponibles", cls: "avail" },
+          { v: assigned, l: "Desviadas", cls: "assigned" },
           { v: buenas, l: "Buenas", cls: "good" }
         ];
         cells.forEach(function (c) {
@@ -1624,301 +1601,58 @@
       }
 
       function renderDetailedScreen() {
+        if (state.currentAudit && typeof state.currentAudit.diverted === "undefined") {
+          state.currentAudit.diverted = null;
+        }
         renderTotals();
         var list = dom.detailedList;
         list.innerHTML = "";
-        var available = auditAvailable();
-
-        DETAILED_DEFECTS.forEach(function (def) {
-          var audit = state.currentAudit;
-          var entry = audit.defects[def.id];
-          var card = document.createElement("div");
-          card.className = "ddefect";
-
-          var hasValue = false;
-          var badgeText = "";
-
-          if (def.type === "qty") {
-            hasValue = Boolean(entry && entry.qty);
-            badgeText = hasValue ? (entry.qty + " papaya" + (entry.qty > 1 ? "s" : "")) : "Agregar";
-          } else if (def.type === "group") {
-            var groupTotal = 0;
-            if (entry && entry.groups) { entry.groups.forEach(function (g) { groupTotal += Number(g.qty) || 0; }); }
-            hasValue = groupTotal > 0;
-            badgeText = hasValue ? (groupTotal + " en " + entry.groups.length + " grupo" + (entry.groups.length > 1 ? "s" : "")) : "Agregar grupos";
-          } else if (def.type === "weight") {
-            hasValue = Boolean(audit.malPesado);
-            badgeText = hasValue ? audit.malPesado : "Caja completa";
-          }
-
-          if (hasValue) { card.classList.add("has-value"); }
-
-          // Deshabilitar defectos que requieren cantidad si no hay disponibles y no tienen valor.
-          var disabled = (def.type === "qty" || def.type === "group") && available <= 0 && !hasValue;
-          if (disabled) { card.classList.add("disabled"); }
-
-          var head = document.createElement("button");
-          head.type = "button";
-          head.className = "ddefect-head";
-          head.disabled = disabled;
-          var title = document.createElement("span");
-          title.className = "ddefect-title";
-          title.textContent = def.label;
-          var badge = document.createElement("span");
-          badge.className = "ddefect-badge" + (hasValue ? "" : " muted");
-          badge.textContent = badgeText;
-          head.appendChild(title);
-          head.appendChild(badge);
-          head.addEventListener("click", function () {
-            if (state.ui.expandedDefect === def.id) {
-              state.ui.expandedDefect = null;
-            } else {
-              state.ui.expandedDefect = def.id;
-            }
-            state.ui.editingDefect = null;
-            state.ui.pendingVariant = null;
-            renderDetailedScreen();
-          });
-          card.appendChild(head);
-
-          if (state.ui.expandedDefect === def.id && !disabled) {
-            card.appendChild(buildDefectBody(def, entry, hasValue, available));
-          }
-
-          list.appendChild(card);
-        });
-      }
-
-      function buildDefectBody(def, entry, hasValue, available) {
+        var card = document.createElement("div");
+        card.className = "ddefect has-value";
         var body = document.createElement("div");
         body.className = "ddefect-body";
+        body.style.borderTop = "0";
 
-        if (def.type === "qty") {
-          var showGrid = !hasValue || state.ui.editingDefect === def.id;
-          if (hasValue && !showGrid) {
-            body.appendChild(buildValueSummary("Seleccionado: " + entry.qty, def.id, "qty"));
-          } else {
-            var max = available + (hasValue ? Number(entry.qty) : 0);
-            var lbl = document.createElement("div");
-            lbl.className = "sub-label";
-            lbl.textContent = "Selecciona la cantidad (1 – " + max + ")";
-            body.appendChild(lbl);
-            var grid = document.createElement("div");
-            grid.className = "qty-grid";
-            for (var n = 1; n <= max; n += 1) {
-              grid.appendChild(makeQtyButton(n, function (val) {
-                state.currentAudit.defects[def.id] = { qty: val };
-                state.ui.expandedDefect = null;
-                state.ui.editingDefect = null;
-                saveShiftDraft();
-                renderDetailedScreen();
-              }));
-            }
-            body.appendChild(grid);
-          }
-          return body;
-        }
+        var label = document.createElement("div");
+        label.className = "sub-label";
+        label.textContent = "¿Cuántas papayas están desviadas?";
+        body.appendChild(label);
 
-        if (def.type === "group") {
-          var groups = (entry && entry.groups) ? entry.groups : [];
-          if (groups.length > 0) {
-            var glbl = document.createElement("div");
-            glbl.className = "sub-label";
-            glbl.textContent = "Grupos agregados";
-            body.appendChild(glbl);
-            groups.forEach(function (g, index) {
-              var item = document.createElement("div");
-              item.className = "group-item";
-              var text = document.createElement("div");
-              text.className = "group-item-text";
-              text.innerHTML = "<strong>" + g.variant + "</strong> = " + g.qty +
-                ' <span class="group-item-tag">' + (index === 0 ? "predominante" : "mezclado") + "</span>";
-              var rm = document.createElement("button");
-              rm.type = "button";
-              rm.className = "btn-mini danger";
-              rm.textContent = "Quitar";
-              rm.addEventListener("click", function () {
-                entry.groups.splice(index, 1);
-                if (entry.groups.length === 0) { delete state.currentAudit.defects[def.id]; }
-                state.ui.pendingVariant = null;
-                saveShiftDraft();
-                renderDetailedScreen();
-              });
-              item.appendChild(text);
-              item.appendChild(rm);
-              body.appendChild(item);
-            });
-          }
-
-          if (available > 0) {
-            if (!state.ui.pendingVariant) {
-              var vlbl = document.createElement("div");
-              vlbl.className = "sub-label";
-              vlbl.textContent = groups.length === 0 ? "Selecciona el grupo predominante" : "Agregar otro grupo (mezclado)";
-              body.appendChild(vlbl);
-              var vgrid = document.createElement("div");
-              vgrid.className = "variant-grid";
-              def.variants.forEach(function (variant) {
-                var vb = document.createElement("button");
-                vb.type = "button";
-                vb.className = "btn-variant";
-                vb.textContent = variant;
-                vb.addEventListener("click", function () {
-                  state.ui.pendingVariant = variant;
-                  renderDetailedScreen();
-                });
-                vgrid.appendChild(vb);
-              });
-              body.appendChild(vgrid);
-            } else {
-              var qlbl = document.createElement("div");
-              qlbl.className = "sub-label";
-              qlbl.textContent = "Cantidad para " + state.ui.pendingVariant + " (1 – " + available + ")";
-              body.appendChild(qlbl);
-              var qgrid = document.createElement("div");
-              qgrid.className = "qty-grid";
-              for (var k = 1; k <= available; k += 1) {
-                qgrid.appendChild(makeQtyButton(k, function (val) {
-                  if (!state.currentAudit.defects[def.id]) { state.currentAudit.defects[def.id] = { groups: [] }; }
-                  state.currentAudit.defects[def.id].groups.push({ variant: state.ui.pendingVariant, qty: val });
-                  state.ui.pendingVariant = null;
-                  saveShiftDraft();
-                  renderDetailedScreen();
-                }));
-              }
-              var cancelVar = document.createElement("button");
-              cancelVar.type = "button";
-              cancelVar.className = "btn-mini ghost";
-              cancelVar.textContent = "Cancelar grupo";
-              cancelVar.style.marginTop = "10px";
-              cancelVar.addEventListener("click", function () {
-                state.ui.pendingVariant = null;
-                renderDetailedScreen();
-              });
-              body.appendChild(qgrid);
-              body.appendChild(cancelVar);
-            }
-          } else {
-            var note = document.createElement("div");
-            note.className = "no-avail-note";
-            note.textContent = "No quedan papayas disponibles para nuevos grupos.";
-            body.appendChild(note);
-          }
-          return body;
-        }
-
-        if (def.type === "weight") {
-          var wlbl = document.createElement("div");
-          wlbl.className = "sub-label";
-          wlbl.textContent = "Mal Pesado (no consume papayas del Count)";
-          body.appendChild(wlbl);
-          var wgrid = document.createElement("div");
-          wgrid.className = "btn-grid btn-grid-2";
-          ["Peso ↑", "Peso ↓"].forEach(function (opt) {
-            var wb = document.createElement("button");
-            wb.type = "button";
-            wb.className = "btn-option" + (state.currentAudit.malPesado === opt ? " selected" : "");
-            wb.textContent = opt;
-            wb.addEventListener("click", function () {
-              state.currentAudit.malPesado = opt;
-              state.ui.expandedDefect = null;
-              saveShiftDraft();
-              renderDetailedScreen();
-            });
-            wgrid.appendChild(wb);
-          });
-          body.appendChild(wgrid);
-          if (hasValue) {
-            var summary = buildValueSummary("Seleccionado: " + state.currentAudit.malPesado, def.id, "weight");
-            body.appendChild(summary);
-          }
-          return body;
-        }
-
-        return body;
-      }
-
-      function buildValueSummary(text, defectId, type) {
-        var wrap = document.createElement("div");
-        wrap.className = "value-summary";
-        var txt = document.createElement("div");
-        txt.textContent = text;
-        var actions = document.createElement("div");
-        actions.className = "value-summary-actions";
-
-        if (type === "qty") {
-          var edit = document.createElement("button");
-          edit.type = "button";
-          edit.className = "btn-mini ghost";
-          edit.textContent = "Editar";
-          edit.addEventListener("click", function () {
-            state.ui.editingDefect = defectId;
+        var grid = document.createElement("div");
+        grid.className = "qty-grid";
+        for (var n = 0; n <= state.currentAudit.count; n += 1) {
+          var button = makeQtyButton(n, function (value) {
+            state.currentAudit.diverted = value;
+            saveShiftDraft();
             renderDetailedScreen();
           });
-          actions.appendChild(edit);
+          if (state.currentAudit.diverted === n) {
+            button.classList.add("selected");
+          }
+          grid.appendChild(button);
+        }
+        body.appendChild(grid);
+
+        if (state.currentAudit.diverted === null) {
+          var note = document.createElement("div");
+          note.className = "no-avail-note";
+          note.textContent = "Selecciona 0 si toda la fruta está buena.";
+          body.appendChild(note);
         }
 
-        var del = document.createElement("button");
-        del.type = "button";
-        del.className = "btn-mini danger";
-        del.textContent = "Borrar";
-        del.addEventListener("click", function () {
-          if (type === "weight") { state.currentAudit.malPesado = null; }
-          else { delete state.currentAudit.defects[defectId]; }
-          state.ui.editingDefect = null;
-          saveShiftDraft();
-          renderDetailedScreen();
-        });
-        actions.appendChild(del);
-
-        wrap.appendChild(txt);
-        wrap.appendChild(actions);
-        return wrap;
+        card.appendChild(body);
+        list.appendChild(card);
       }
 
       function buildDetailedSummary() {
         var audit = state.currentAudit;
-        if (!audit) { return "Sin defectos"; }
-        var parts = [];
-        DETAILED_DEFECTS.forEach(function (def) {
-          var entry = audit.defects[def.id];
-          if (def.type === "qty" && entry && entry.qty) {
-            parts.push(def.label + " " + entry.qty);
-          }
-          if (def.type === "group" && entry && entry.groups && entry.groups.length) {
-            var gtxt = entry.groups.map(function (g, i) {
-              return g.variant + " " + g.qty + (i === 0 ? " (pred)" : " (mez)");
-            }).join(", ");
-            parts.push(def.label + ": " + gtxt);
-          }
-        });
-        if (audit.malPesado) { parts.push("Mal Pesado (" + audit.malPesado + ")"); }
-        return parts.length ? parts.join(" · ") : "Sin defectos";
+        if (!audit || auditAssigned() === 0) { return "Sin fruta desviada"; }
+        return "Fruta desviada: " + auditAssigned();
       }
 
       function buildDetailedRows() {
-        var audit = state.currentAudit;
-        var rows = [];
-        DETAILED_DEFECTS.forEach(function (def) {
-          var entry = audit.defects[def.id];
-          if (def.type === "qty" && entry && entry.qty) {
-            rows.push({ defecto: def.label, variante: "", cantidad: entry.qty, malPesado: "" });
-          }
-          if (def.type === "group" && entry && entry.groups && entry.groups.length) {
-            entry.groups.forEach(function (g, i) {
-              rows.push({
-                defecto: def.label,
-                variante: g.variant + (i === 0 ? " (predominante)" : " (mezclado)"),
-                cantidad: g.qty,
-                malPesado: ""
-              });
-            });
-          }
-        });
-        if (audit.malPesado) {
-          rows.push({ defecto: "Mal Pesado", variante: audit.malPesado, cantidad: 0, malPesado: audit.malPesado });
-        }
-        return rows;
+        if (auditAssigned() === 0) { return []; }
+        return [{ defecto: "Fruta desviada", variante: "", cantidad: auditAssigned(), malPesado: "" }];
       }
 
       /* ---------- Selección de empacador (compartida) ---------- */
@@ -2104,7 +1838,7 @@
           assigned: assigned,
           buenas: buenas,
           rows: rows,
-          summary: hasDefect ? summary : "Sin defectos",
+          summary: hasDefect ? summary : "Sin fruta desviada",
           countsAsError: hasDefect,
           emails: CONFIG.alertEmails
         };
@@ -2115,7 +1849,7 @@
         saveShiftDraft();
 
         sendToApi(record).then(function () {
-          showToast(hasDefect ? ("Auditoría guardada · " + packerCode) : ("Caja sin defectos · " + packerCode), "success");
+          showToast(hasDefect ? ("Auditoría guardada · " + packerCode) : ("Caja sin fruta desviada · " + packerCode), "success");
         }).catch(function () {
           state.pendingQueue.push(record);
           savePendingQueue();
@@ -2450,18 +2184,17 @@
         dom.btnConfirmClearSel.addEventListener("click", function () {
           dom.modalClearSel.classList.remove("open");
           if (state.currentAudit) {
-            state.currentAudit.defects = {};
-            state.currentAudit.malPesado = null;
+            state.currentAudit.diverted = null;
           }
           state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
           saveShiftDraft();
           renderDetailedScreen();
-          showToast("Selecciones borradas. Count conservado.", "info");
+          showToast("Selección borrada. Count conservado.", "info");
         });
         dom.btnCancelChangeCount.addEventListener("click", function () { dom.modalChangeCount.classList.remove("open"); });
         dom.btnConfirmChangeCount.addEventListener("click", function () {
           dom.modalChangeCount.classList.remove("open");
-          if (state.currentAudit) { state.currentAudit.defects = {}; state.currentAudit.malPesado = null; }
+          if (state.currentAudit) { state.currentAudit.diverted = null; }
           state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
           renderCountGrid();
           showScreen("screenCount");
@@ -2483,8 +2216,12 @@
           showToast("Selecciona primero el Count.", "error");
           return;
         }
+        if (state.currentAudit.diverted === null || typeof state.currentAudit.diverted === "undefined") {
+          showToast("Selecciona cuántas papayas están desviadas. Usa 0 si todas están buenas.", "error");
+          return;
+        }
         if (auditAssigned() > state.currentAudit.count) {
-          showToast("Las cantidades exceden el Count.", "error");
+          showToast("La fruta desviada no puede exceder el Count.", "error");
           return;
         }
         dom.btnSubmitAudit.disabled = true;
@@ -2493,7 +2230,10 @@
       }
 
       function handleChangeCount() {
-        if (auditHasDefect()) { dom.modalChangeCount.classList.add("open"); }
+        if (state.currentAudit && state.currentAudit.diverted !== null &&
+            typeof state.currentAudit.diverted !== "undefined") {
+          dom.modalChangeCount.classList.add("open");
+        }
         else { renderCountGrid(); showScreen("screenCount"); }
       }
 

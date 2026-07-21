@@ -359,7 +359,7 @@ function handleRegisterDetailed_(payload) {
   var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
   var supervisor = payload.supervisor || payload._supervisorFromToken || "";
   var rows = payload.rows && payload.rows.length ? payload.rows : [{
-    defecto: "Sin defectos", variante: "", cantidad: 0, malPesado: ""
+    defecto: "Sin fruta desviada", variante: "", cantidad: 0, malPesado: ""
   }];
 
   var ts = formatTimestamp_(payload.timestamp);
@@ -612,8 +612,8 @@ function testDetailed() {
     assigned: 3,
     buenas: 5,
     countsAsError: true,
-    summary: "Pudrición 3",
-    rows: [{ defecto: "Pudrición", variante: "", cantidad: 3, malPesado: "" }]
+    summary: "Fruta desviada: 3",
+    rows: [{ defecto: "Fruta desviada", variante: "", cantidad: 3, malPesado: "" }]
   });
   Logger.log(JSON.stringify(result));
 }
