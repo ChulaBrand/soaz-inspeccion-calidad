@@ -1,4 +1,4 @@
-var CACHE_NAME = "soaz-inspeccion-v3";
+var CACHE_NAME = "soaz-inspeccion-v4";
 var ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", function (event) {
@@ -25,19 +25,27 @@ self.addEventListener("activate", function (event) {
   );
 });
 
+// Estrategia NETWORK-FIRST: siempre intenta traer la última versión de la red
+// y solo usa la caché cuando no hay conexión. Así la app se actualiza sola.
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
-      if (cached) {
-        return cached;
+    fetch(event.request).then(function (response) {
+      if (response && response.status === 200 && response.type === "basic") {
+        var copy = response.clone();
+        caches.open(CACHE_NAME).then(function (cache) {
+          cache.put(event.request, copy);
+        });
       }
-      return fetch(event.request).then(function (response) {
-        return response;
-      }).catch(function () {
+      return response;
+    }).catch(function () {
+      return caches.match(event.request).then(function (cached) {
+        if (cached) {
+          return cached;
+        }
         if (event.request.mode === "navigate") {
           return caches.match("./index.html");
         }
