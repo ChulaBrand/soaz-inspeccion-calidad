@@ -72,10 +72,10 @@ Acciones protegidas: `list_packers`, `upsert_packer`, `delete_packer`, `register
 3. **Modo simple** (toggle apagado): tablero de defectos con rutas → empacador → guarda en `Inspecciones Simples`. Cada inspección suma **1 error**.
 4. **Modo detallado** (toggle encendido):
    - **Count** (5–20): total de papayas en la caja.
-   - **Fruta desviada**: se selecciona únicamente cuántas papayas están mal, desde 0 hasta el Count.
+   - **Defectos**: lista táctil (Pudrición, Tallones, Calibre Revuelto, Colores Mixtos, Mal Acomodo, Mal Envuelto, Mal Pesado). En cada defecto solo se elige **la cantidad** de papayas afectadas; asignación exclusiva (una papaya, un defecto). **Mal Pesado** es a nivel caja (Peso ↑/↓) y no consume Count.
    - Las papayas restantes se calculan automáticamente como buenas.
-   - **Submit** → empacador → guarda en `Inspecciones Detalladas` → vuelve a **Count**.
-   - Una auditoría con fruta desviada suma **1 error**; con 0 desviadas suma **0**.
+   - **Submit** → empacador → guarda en `Inspecciones Detalladas` (una fila por defecto) → vuelve a **Count**.
+   - Una auditoría con ≥1 defecto suma **1 error**; sin defectos suma **0** y se registra como `Sin defectos`.
 5. **Alerta de 3 errores**: al tercer registro con error de un empacador, muestra modal y envía email (una vez por turno y empacador).
 6. **Cerrar Turno**: limpia contadores, borrador y token local; regresa al inicio.
 

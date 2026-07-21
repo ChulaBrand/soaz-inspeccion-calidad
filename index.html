@@ -479,7 +479,7 @@
     /* ---- Totals bar ---- */
     .totals-bar {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
       margin-bottom: 16px;
     }
@@ -856,8 +856,8 @@
       <section class="panel" style="flex:1;display:flex;flex-direction:column;">
         <div class="flow-header">
           <div class="flow-step" id="detailedStepLabel">Count 0</div>
-          <h1 class="panel-title">Fruta Desviada</h1>
-          <p class="panel-desc">Selecciona únicamente cuántas papayas de la caja están mal.</p>
+          <h1 class="panel-title">Defectos de la Caja</h1>
+          <p class="panel-desc">Toca un defecto y elige cuántas papayas están mal. Una papaya no puede repetirse en dos defectos.</p>
         </div>
 
         <div class="totals-bar" id="totalsBar"></div>
@@ -867,7 +867,7 @@
           <button class="btn btn-primary btn-block btn-submit" type="button" id="btnSubmitAudit">Submit</button>
           <div class="detailed-secondary">
             <button class="btn btn-ghost" type="button" id="btnChangeCount">Cambiar Count</button>
-            <button class="btn btn-ghost btn-clear" type="button" id="btnClearSelections">Borrar selección</button>
+            <button class="btn btn-ghost btn-clear" type="button" id="btnClearSelections">Borrar selecciones</button>
           </div>
         </div>
       </section>
@@ -914,8 +914,8 @@
 
   <div class="modal-overlay" id="modalClearSel">
     <div class="modal-card">
-      <h2 class="modal-title">Borrar Selección</h2>
-      <p class="modal-text">¿Deseas borrar la cantidad de fruta desviada?</p>
+      <h2 class="modal-title">Borrar Selecciones</h2>
+      <p class="modal-text">¿Deseas borrar todas las selecciones de esta auditoría?</p>
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" id="btnCancelClearSel">Cancelar</button>
         <button class="btn btn-danger" type="button" id="btnConfirmClearSel">Aceptar</button>
@@ -926,7 +926,7 @@
   <div class="modal-overlay" id="modalChangeCount">
     <div class="modal-card">
       <h2 class="modal-title">Cambiar Count</h2>
-      <p class="modal-text">Ya seleccionaste la cantidad de fruta desviada. Cambiar el Count borrará esa selección. ¿Continuar?</p>
+      <p class="modal-text">Ya hay defectos capturados en esta caja. Cambiar el Count borrará esas selecciones. ¿Continuar?</p>
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" id="btnCancelChangeCount">Cancelar</button>
         <button class="btn btn-danger" type="button" id="btnConfirmChangeCount">Aceptar</button>
@@ -947,7 +947,7 @@
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbx-W6Ip2vYvxiporJv3Kvf6dyE3hfPaRw5aKwgT2T2FnYFUR4q6KQL_Nzzc2OieAT8c/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbxLjNEbJafY7Df5lUkbDp_F64B1nBhVKw7aXO-a63sO4SLhvEXM1LpWrhHXK1p-cub5/exec",
         alertEmails: ["calidad@soaz.com", "supervision@soaz.com"],
         operationalDayStartHour: 16,
         storageKeys: {
@@ -968,6 +968,18 @@
         { id: "colores_mixtos", label: "Colores Mixtos", hint: "Predominante y mezclado", critical: false },
         { id: "mal_acomodo", label: "Mal Acomodo", hint: "Acomodo deficiente", critical: true },
         { id: "mal_envuelto", label: "Mal Envuelto", hint: "Empaque deficiente", critical: false }
+      ];
+
+      // Modo detallado: lista vertical (Mal Pesado siempre al final).
+      // Calibre Revuelto y Colores Mixtos son simples: solo se elige la cantidad.
+      var DETAILED_DEFECTS = [
+        { id: "pudricion", label: "Pudrición", type: "qty" },
+        { id: "tallones", label: "Tallones", type: "qty" },
+        { id: "calibre_revuelto", label: "Calibre Revuelto", type: "qty" },
+        { id: "colores_mixtos", label: "Colores Mixtos", type: "qty" },
+        { id: "mal_acomodo", label: "Mal Acomodo", type: "qty" },
+        { id: "mal_envuelto", label: "Mal Envuelto", type: "qty" },
+        { id: "mal_pesado", label: "Mal Pesado", type: "weight" }
       ];
 
       // Todos los Counts posibles, desde 5 hasta 20 papayas.
@@ -1516,7 +1528,7 @@
       /* ---------- Modo detallado: auditoría ---------- */
 
       function newAudit() {
-        return { auditId: uid("audit"), count: null, diverted: null };
+        return { auditId: uid("audit"), count: null, defects: {}, malPesado: null };
       }
 
       function startNewBox() {
@@ -1547,7 +1559,8 @@
       function pickCount(n) {
         if (!state.currentAudit) { state.currentAudit = newAudit(); }
         state.currentAudit.count = n;
-        state.currentAudit.diverted = null;
+        state.currentAudit.defects = {};
+        state.currentAudit.malPesado = null;
         state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         saveShiftDraft();
         renderDetailedScreen();
@@ -1556,24 +1569,37 @@
 
       function auditAssigned() {
         var audit = state.currentAudit;
-        if (!audit) { return 0; }
-        return Number(audit.diverted) || 0;
+        if (!audit || !audit.defects) { return 0; }
+        var total = 0;
+        DETAILED_DEFECTS.forEach(function (def) {
+          var entry = audit.defects[def.id];
+          if (entry && def.type === "qty") { total += Number(entry.qty) || 0; }
+        });
+        return total;
+      }
+
+      function auditAvailable() {
+        var audit = state.currentAudit;
+        if (!audit || audit.count == null) { return 0; }
+        return audit.count - auditAssigned();
       }
 
       function auditHasDefect() {
-        return auditAssigned() > 0;
+        return auditAssigned() > 0 || Boolean(state.currentAudit && state.currentAudit.malPesado);
       }
 
       function renderTotals() {
         var audit = state.currentAudit;
         var count = audit && audit.count != null ? audit.count : 0;
         var assigned = auditAssigned();
+        var available = count - assigned;
         var buenas = count - assigned;
         dom.detailedStepLabel.textContent = "Count " + count;
         dom.totalsBar.innerHTML = "";
         var cells = [
           { v: count, l: "Count total", cls: "" },
-          { v: assigned, l: "Desviadas", cls: "assigned" },
+          { v: assigned, l: "Con defecto", cls: "assigned" },
+          { v: available, l: "Disponibles", cls: "avail" },
           { v: buenas, l: "Buenas", cls: "good" }
         ];
         cells.forEach(function (c) {
@@ -1601,58 +1627,194 @@
       }
 
       function renderDetailedScreen() {
-        if (state.currentAudit && typeof state.currentAudit.diverted === "undefined") {
-          state.currentAudit.diverted = null;
+        if (state.currentAudit && !state.currentAudit.defects) {
+          state.currentAudit.defects = {};
+          state.currentAudit.malPesado = state.currentAudit.malPesado || null;
         }
         renderTotals();
         var list = dom.detailedList;
         list.innerHTML = "";
-        var card = document.createElement("div");
-        card.className = "ddefect has-value";
-        var body = document.createElement("div");
-        body.className = "ddefect-body";
-        body.style.borderTop = "0";
+        var available = auditAvailable();
 
-        var label = document.createElement("div");
-        label.className = "sub-label";
-        label.textContent = "¿Cuántas papayas están desviadas?";
-        body.appendChild(label);
+        DETAILED_DEFECTS.forEach(function (def) {
+          var audit = state.currentAudit;
+          var entry = audit.defects[def.id];
+          var card = document.createElement("div");
+          card.className = "ddefect";
 
-        var grid = document.createElement("div");
-        grid.className = "qty-grid";
-        for (var n = 0; n <= state.currentAudit.count; n += 1) {
-          var button = makeQtyButton(n, function (value) {
-            state.currentAudit.diverted = value;
-            saveShiftDraft();
+          var hasValue = false;
+          var badgeText = "";
+
+          if (def.type === "qty") {
+            hasValue = Boolean(entry && entry.qty);
+            badgeText = hasValue ? (entry.qty + " papaya" + (entry.qty > 1 ? "s" : "")) : "Agregar";
+          } else if (def.type === "weight") {
+            hasValue = Boolean(audit.malPesado);
+            badgeText = hasValue ? audit.malPesado : "Caja completa";
+          }
+
+          if (hasValue) { card.classList.add("has-value"); }
+
+          // Deshabilitar defectos que requieren cantidad si no hay disponibles y no tienen valor.
+          var disabled = def.type === "qty" && available <= 0 && !hasValue;
+          if (disabled) { card.classList.add("disabled"); }
+
+          var head = document.createElement("button");
+          head.type = "button";
+          head.className = "ddefect-head";
+          head.disabled = disabled;
+          var title = document.createElement("span");
+          title.className = "ddefect-title";
+          title.textContent = def.label;
+          var badge = document.createElement("span");
+          badge.className = "ddefect-badge" + (hasValue ? "" : " muted");
+          badge.textContent = badgeText;
+          head.appendChild(title);
+          head.appendChild(badge);
+          head.addEventListener("click", function () {
+            if (state.ui.expandedDefect === def.id) {
+              state.ui.expandedDefect = null;
+            } else {
+              state.ui.expandedDefect = def.id;
+            }
+            state.ui.editingDefect = null;
             renderDetailedScreen();
           });
-          if (state.currentAudit.diverted === n) {
-            button.classList.add("selected");
+          card.appendChild(head);
+
+          if (state.ui.expandedDefect === def.id && !disabled) {
+            card.appendChild(buildDefectBody(def, entry, hasValue, available));
           }
-          grid.appendChild(button);
-        }
-        body.appendChild(grid);
 
-        if (state.currentAudit.diverted === null) {
-          var note = document.createElement("div");
-          note.className = "no-avail-note";
-          note.textContent = "Selecciona 0 si toda la fruta está buena.";
-          body.appendChild(note);
+          list.appendChild(card);
+        });
+      }
+
+      function buildDefectBody(def, entry, hasValue, available) {
+        var body = document.createElement("div");
+        body.className = "ddefect-body";
+
+        if (def.type === "qty") {
+          var showGrid = !hasValue || state.ui.editingDefect === def.id;
+          if (hasValue && !showGrid) {
+            body.appendChild(buildValueSummary("Seleccionado: " + entry.qty, def.id, "qty"));
+          } else {
+            var max = available + (hasValue ? Number(entry.qty) : 0);
+            var lbl = document.createElement("div");
+            lbl.className = "sub-label";
+            lbl.textContent = "¿Cuántas papayas tienen este defecto? (1 – " + max + ")";
+            body.appendChild(lbl);
+            var grid = document.createElement("div");
+            grid.className = "qty-grid";
+            for (var n = 1; n <= max; n += 1) {
+              grid.appendChild(makeQtyButton(n, function (val) {
+                state.currentAudit.defects[def.id] = { qty: val };
+                state.ui.expandedDefect = null;
+                state.ui.editingDefect = null;
+                saveShiftDraft();
+                renderDetailedScreen();
+              }));
+            }
+            body.appendChild(grid);
+          }
+          return body;
         }
 
-        card.appendChild(body);
-        list.appendChild(card);
+        if (def.type === "weight") {
+          var wlbl = document.createElement("div");
+          wlbl.className = "sub-label";
+          wlbl.textContent = "Mal Pesado (no consume papayas del Count)";
+          body.appendChild(wlbl);
+          var wgrid = document.createElement("div");
+          wgrid.className = "btn-grid btn-grid-2";
+          ["Peso ↑", "Peso ↓"].forEach(function (opt) {
+            var wb = document.createElement("button");
+            wb.type = "button";
+            wb.className = "btn-option" + (state.currentAudit.malPesado === opt ? " selected" : "");
+            wb.textContent = opt;
+            wb.addEventListener("click", function () {
+              state.currentAudit.malPesado = opt;
+              state.ui.expandedDefect = null;
+              saveShiftDraft();
+              renderDetailedScreen();
+            });
+            wgrid.appendChild(wb);
+          });
+          body.appendChild(wgrid);
+          if (hasValue) {
+            body.appendChild(buildValueSummary("Seleccionado: " + state.currentAudit.malPesado, def.id, "weight"));
+          }
+          return body;
+        }
+
+        return body;
+      }
+
+      function buildValueSummary(text, defectId, type) {
+        var wrap = document.createElement("div");
+        wrap.className = "value-summary";
+        var txt = document.createElement("div");
+        txt.textContent = text;
+        var actions = document.createElement("div");
+        actions.className = "value-summary-actions";
+
+        if (type === "qty") {
+          var edit = document.createElement("button");
+          edit.type = "button";
+          edit.className = "btn-mini ghost";
+          edit.textContent = "Editar";
+          edit.addEventListener("click", function () {
+            state.ui.editingDefect = defectId;
+            renderDetailedScreen();
+          });
+          actions.appendChild(edit);
+        }
+
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "btn-mini danger";
+        del.textContent = "Borrar";
+        del.addEventListener("click", function () {
+          if (type === "weight") { state.currentAudit.malPesado = null; }
+          else { delete state.currentAudit.defects[defectId]; }
+          state.ui.editingDefect = null;
+          saveShiftDraft();
+          renderDetailedScreen();
+        });
+        actions.appendChild(del);
+
+        wrap.appendChild(txt);
+        wrap.appendChild(actions);
+        return wrap;
       }
 
       function buildDetailedSummary() {
         var audit = state.currentAudit;
-        if (!audit || auditAssigned() === 0) { return "Sin fruta desviada"; }
-        return "Fruta desviada: " + auditAssigned();
+        if (!audit) { return "Sin defectos"; }
+        var parts = [];
+        DETAILED_DEFECTS.forEach(function (def) {
+          var entry = audit.defects[def.id];
+          if (def.type === "qty" && entry && entry.qty) {
+            parts.push(def.label + " " + entry.qty);
+          }
+        });
+        if (audit.malPesado) { parts.push("Mal Pesado (" + audit.malPesado + ")"); }
+        return parts.length ? parts.join(" · ") : "Sin defectos";
       }
 
       function buildDetailedRows() {
-        if (auditAssigned() === 0) { return []; }
-        return [{ defecto: "Fruta desviada", variante: "", cantidad: auditAssigned(), malPesado: "" }];
+        var audit = state.currentAudit;
+        var rows = [];
+        DETAILED_DEFECTS.forEach(function (def) {
+          var entry = audit.defects[def.id];
+          if (def.type === "qty" && entry && entry.qty) {
+            rows.push({ defecto: def.label, variante: "", cantidad: entry.qty, malPesado: "" });
+          }
+        });
+        if (audit.malPesado) {
+          rows.push({ defecto: "Mal Pesado", variante: audit.malPesado, cantidad: 0, malPesado: audit.malPesado });
+        }
+        return rows;
       }
 
       /* ---------- Selección de empacador (compartida) ---------- */
@@ -1838,7 +2000,7 @@
           assigned: assigned,
           buenas: buenas,
           rows: rows,
-          summary: hasDefect ? summary : "Sin fruta desviada",
+          summary: hasDefect ? summary : "Sin defectos",
           countsAsError: hasDefect,
           emails: CONFIG.alertEmails
         };
@@ -1849,7 +2011,7 @@
         saveShiftDraft();
 
         sendToApi(record).then(function () {
-          showToast(hasDefect ? ("Auditoría guardada · " + packerCode) : ("Caja sin fruta desviada · " + packerCode), "success");
+          showToast(hasDefect ? ("Auditoría guardada · " + packerCode) : ("Caja sin defectos · " + packerCode), "success");
         }).catch(function () {
           state.pendingQueue.push(record);
           savePendingQueue();
@@ -2184,17 +2346,18 @@
         dom.btnConfirmClearSel.addEventListener("click", function () {
           dom.modalClearSel.classList.remove("open");
           if (state.currentAudit) {
-            state.currentAudit.diverted = null;
+            state.currentAudit.defects = {};
+            state.currentAudit.malPesado = null;
           }
           state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
           saveShiftDraft();
           renderDetailedScreen();
-          showToast("Selección borrada. Count conservado.", "info");
+          showToast("Selecciones borradas. Count conservado.", "info");
         });
         dom.btnCancelChangeCount.addEventListener("click", function () { dom.modalChangeCount.classList.remove("open"); });
         dom.btnConfirmChangeCount.addEventListener("click", function () {
           dom.modalChangeCount.classList.remove("open");
-          if (state.currentAudit) { state.currentAudit.diverted = null; }
+          if (state.currentAudit) { state.currentAudit.defects = {}; state.currentAudit.malPesado = null; }
           state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
           renderCountGrid();
           showScreen("screenCount");
@@ -2216,12 +2379,8 @@
           showToast("Selecciona primero el Count.", "error");
           return;
         }
-        if (state.currentAudit.diverted === null || typeof state.currentAudit.diverted === "undefined") {
-          showToast("Selecciona cuántas papayas están desviadas. Usa 0 si todas están buenas.", "error");
-          return;
-        }
         if (auditAssigned() > state.currentAudit.count) {
-          showToast("La fruta desviada no puede exceder el Count.", "error");
+          showToast("Las cantidades exceden el Count.", "error");
           return;
         }
         dom.btnSubmitAudit.disabled = true;
@@ -2230,10 +2389,7 @@
       }
 
       function handleChangeCount() {
-        if (state.currentAudit && state.currentAudit.diverted !== null &&
-            typeof state.currentAudit.diverted !== "undefined") {
-          dom.modalChangeCount.classList.add("open");
-        }
+        if (auditHasDefect()) { dom.modalChangeCount.classList.add("open"); }
         else { renderCountGrid(); showScreen("screenCount"); }
       }
 
