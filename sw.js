@@ -1,4 +1,4 @@
-var CACHE_NAME = "soaz-inspeccion-v1";
+var CACHE_NAME = "soaz-inspeccion-v2";
 var ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", function (event) {
@@ -11,7 +11,18 @@ self.addEventListener("install", function (event) {
 });
 
 self.addEventListener("activate", function (event) {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (key) {
+        if (key !== CACHE_NAME) {
+          return caches.delete(key);
+        }
+        return null;
+      }));
+    }).then(function () {
+      return self.clients.claim();
+    })
+  );
 });
 
 self.addEventListener("fetch", function (event) {

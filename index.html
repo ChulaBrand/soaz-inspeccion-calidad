@@ -136,6 +136,27 @@
       font-size: 0.88rem;
     }
 
+    .mode-tag {
+      display: inline-block;
+      margin-top: 2px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .mode-tag.detailed {
+      background: var(--accent-soft);
+      color: var(--accent-hover);
+    }
+
+    .mode-tag.simple {
+      background: rgba(56, 189, 248, 0.16);
+      color: #7dd3fc;
+    }
+
     .screen {
       display: none;
       flex: 1;
@@ -148,14 +169,8 @@
     }
 
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .panel {
@@ -181,9 +196,7 @@
       font-size: 0.95rem;
     }
 
-    .field-group {
-      margin-bottom: 18px;
-    }
+    .field-group { margin-bottom: 18px; }
 
     .field-label {
       display: block;
@@ -229,76 +242,44 @@
       touch-action: manipulation;
     }
 
-    .btn:active {
-      transform: scale(0.98);
-    }
+    .btn:active { transform: scale(0.98); }
 
     .btn:disabled {
-      opacity: 0.45;
+      opacity: 0.4;
       cursor: not-allowed;
       transform: none;
     }
 
-    .btn-primary {
-      background: var(--accent);
-      color: #111827;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: var(--accent-hover);
-    }
+    .btn-primary { background: var(--accent); color: #111827; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
 
     .btn-secondary {
       background: var(--bg-elevated);
       border: 2px solid var(--border-strong);
       color: var(--text);
     }
-
-    .btn-secondary:hover:not(:disabled) {
-      border-color: var(--accent);
-    }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--accent); }
 
     .btn-danger {
       background: var(--danger-soft);
       border: 2px solid var(--danger);
       color: #fecaca;
     }
-
-    .btn-danger:hover:not(:disabled) {
-      background: rgba(239, 68, 68, 0.28);
-    }
+    .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.28); }
 
     .btn-ghost {
       background: transparent;
       border: 2px dashed var(--border-strong);
       color: var(--text-muted);
     }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
 
-    .btn-ghost:hover:not(:disabled) {
-      border-color: var(--accent);
-      color: var(--text);
-    }
+    .btn-block { width: 100%; }
 
-    .btn-block {
-      width: 100%;
-    }
-
-    .btn-grid {
-      display: grid;
-      gap: 12px;
-    }
-
-    .btn-grid-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .btn-grid-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .btn-grid-4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
+    .btn-grid { display: grid; gap: 12px; }
+    .btn-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .btn-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .btn-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
     .btn-defect {
       min-height: 88px;
@@ -312,25 +293,10 @@
       justify-content: center;
       gap: 4px;
     }
-
-    .btn-defect:hover {
-      border-color: var(--accent);
-      background: rgba(245, 158, 11, 0.06);
-    }
-
-    .btn-defect.critical {
-      border-color: rgba(248, 113, 113, 0.35);
-      background: rgba(248, 113, 113, 0.08);
-    }
-
-    .btn-defect.critical:hover {
-      border-color: rgba(252, 165, 165, 0.55);
-      background: rgba(248, 113, 113, 0.12);
-    }
-
-    .btn-defect.critical .btn-defect-label {
-      color: #fca5a5;
-    }
+    .btn-defect:hover { border-color: var(--accent); background: rgba(245, 158, 11, 0.06); }
+    .btn-defect.critical { border-color: rgba(248, 113, 113, 0.35); background: rgba(248, 113, 113, 0.08); }
+    .btn-defect.critical:hover { border-color: rgba(252, 165, 165, 0.55); background: rgba(248, 113, 113, 0.12); }
+    .btn-defect.critical .btn-defect-label { color: #fca5a5; }
 
     .btn-delete-packer {
       min-height: 44px;
@@ -342,11 +308,7 @@
       font-size: 0.82rem;
       font-weight: 600;
     }
-
-    .btn-delete-packer:hover {
-      background: rgba(248, 113, 113, 0.12);
-      border-color: rgba(252, 165, 165, 0.7);
-    }
+    .btn-delete-packer:hover { background: rgba(248, 113, 113, 0.12); border-color: rgba(252, 165, 165, 0.7); }
 
     .search-bar {
       display: grid;
@@ -358,12 +320,7 @@
       border-radius: var(--radius-sm);
     }
 
-    .search-mode {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px 16px;
-    }
-
+    .search-mode { display: flex; flex-wrap: wrap; gap: 12px 16px; }
     .search-mode label {
       display: inline-flex;
       align-items: center;
@@ -373,16 +330,8 @@
       cursor: pointer;
       user-select: none;
     }
-
-    .search-mode input {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--accent);
-    }
-
-    .search-bar .field-input {
-      min-height: 48px;
-    }
+    .search-mode input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .search-bar .field-input { min-height: 48px; }
 
     .btn-defect-label {
       font-family: var(--font-display);
@@ -392,11 +341,7 @@
       text-transform: uppercase;
       line-height: 1.1;
     }
-
-    .btn-defect-hint {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
+    .btn-defect-hint { font-size: 0.82rem; color: var(--text-muted); }
 
     .btn-option {
       min-height: 72px;
@@ -409,16 +354,8 @@
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
-
-    .btn-option:hover {
-      border-color: var(--accent);
-    }
-
-    .btn-option.selected {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--accent-hover);
-    }
+    .btn-option:hover { border-color: var(--accent); }
+    .btn-option.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-hover); }
 
     .btn-packer {
       min-height: 76px;
@@ -432,35 +369,12 @@
       padding: 14px 16px;
       text-align: left;
     }
+    .btn-packer:hover { border-color: var(--accent); }
+    .btn-packer-code { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; letter-spacing: 0.05em; }
+    .btn-packer-name { font-size: 0.88rem; color: var(--text-muted); }
+    .btn-packer-errors { margin-top: 4px; font-size: 0.78rem; color: var(--warning); }
 
-    .btn-packer:hover {
-      border-color: var(--accent);
-    }
-
-    .btn-packer-code {
-      font-family: var(--font-display);
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-    }
-
-    .btn-packer-name {
-      font-size: 0.88rem;
-      color: var(--text-muted);
-    }
-
-    .btn-packer-errors {
-      margin-top: 4px;
-      font-size: 0.78rem;
-      color: var(--warning);
-    }
-
-    .toolbar-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
+    .toolbar-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
 
     .packer-list {
       display: grid;
@@ -480,48 +394,15 @@
       border: 2px solid var(--border);
       border-radius: var(--radius-sm);
     }
+    .packer-row.inactive { opacity: 0.5; }
+    .packer-row-info { flex: 1; min-width: 0; }
+    .packer-row-code { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.04em; }
+    .packer-row-name { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .packer-row.inactive {
-      opacity: 0.5;
-    }
+    .checkbox-wrap { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .checkbox-wrap input { width: 22px; height: 22px; accent-color: var(--accent); }
 
-    .packer-row-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .packer-row-code {
-      font-family: var(--font-display);
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
-
-    .packer-row-name {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .checkbox-wrap {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-    }
-
-    .checkbox-wrap input {
-      width: 22px;
-      height: 22px;
-      accent-color: var(--accent);
-    }
-
-    .flow-header {
-      margin-bottom: 16px;
-    }
-
+    .flow-header { margin-bottom: 16px; }
     .flow-step {
       display: inline-block;
       padding: 6px 12px;
@@ -534,15 +415,229 @@
       text-transform: uppercase;
       margin-bottom: 8px;
     }
+    .flow-breadcrumb { font-size: 0.88rem; color: var(--text-muted); }
+    .flow-breadcrumb span { color: var(--accent); }
 
-    .flow-breadcrumb {
-      font-size: 0.88rem;
+    /* ---- Toggle Detailed Mode ---- */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-elevated);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-row-text { display: flex; flex-direction: column; gap: 2px; }
+    .toggle-row-title { font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; }
+    .toggle-row-hint { font-size: 0.8rem; color: var(--text-muted); }
+    .toggle-switch { position: relative; width: 64px; height: 36px; flex: 0 0 auto; }
+    .toggle-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border-strong);
+      border-radius: 999px;
+      transition: background 0.18s ease;
+    }
+    .toggle-slider::before {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e8edf5;
+      transition: transform 0.18s ease;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(28px); }
+
+    /* ---- Count ---- */
+    .count-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .btn-count {
+      min-height: 90px;
+      background: var(--bg-elevated);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-display);
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .btn-count:hover { border-color: var(--accent); background: rgba(245, 158, 11, 0.06); color: var(--accent-hover); }
+
+    /* ---- Totals bar ---- */
+    .totals-bar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .totals-cell {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .totals-cell .tv { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; line-height: 1; }
+    .totals-cell .tl { font-size: 0.66rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+    .totals-cell.good .tv { color: var(--success); }
+    .totals-cell.avail .tv { color: var(--info); }
+    .totals-cell.assigned .tv { color: var(--warning); }
+
+    /* ---- Detailed defect list ---- */
+    .detailed-list { display: grid; gap: 10px; margin-bottom: 18px; }
+    .ddefect { background: var(--bg-elevated); border: 2px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .ddefect.has-value { border-color: rgba(245, 158, 11, 0.55); }
+    .ddefect.disabled { opacity: 0.45; }
+    .ddefect-head {
+      width: 100%;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      text-align: left;
+    }
+    .ddefect-head:disabled { cursor: not-allowed; }
+    .ddefect-title { font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+    .ddefect-badge {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent-hover);
+      background: var(--accent-soft);
+      padding: 4px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .ddefect-badge.muted { color: var(--text-muted); background: transparent; }
+    .ddefect-body { padding: 0 16px 16px; border-top: 1px solid var(--border); }
+    .ddefect-body .sub-label { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 8px; }
+
+    .qty-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+    .btn-qty {
+      min-height: 56px;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .btn-qty:hover { border-color: var(--accent); color: var(--accent-hover); }
+
+    .variant-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .btn-variant {
+      min-height: 60px;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .btn-variant:hover { border-color: var(--accent); color: var(--accent-hover); }
+
+    .group-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+    }
+    .group-item-text { font-size: 0.95rem; }
+    .group-item-text strong { color: var(--accent-hover); }
+    .group-item-tag { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-mini {
+      min-height: 40px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .btn-mini.danger { border: 1px solid rgba(248,113,113,0.5); color: #fca5a5; }
+    .btn-mini.danger:hover { background: rgba(248,113,113,0.14); }
+    .btn-mini.ghost { border: 1px solid var(--border-strong); color: var(--text-muted); }
+    .btn-mini.ghost:hover { border-color: var(--accent); color: var(--text); }
+
+    .value-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .value-summary-actions { display: flex; gap: 8px; }
+    .no-avail-note { margin-top: 12px; font-size: 0.85rem; color: var(--warning); }
+
+    .detailed-actions { margin-top: auto; display: grid; gap: 12px; }
+    .btn-submit { min-height: 66px; font-size: 1.25rem; font-family: var(--font-display); letter-spacing: 0.05em; text-transform: uppercase; }
+    .detailed-secondary { display: flex; gap: 10px; justify-content: space-between; }
+    .detailed-secondary .btn { flex: 1; min-height: 46px; font-size: 0.85rem; }
+    .btn-clear { color: #fca5a5; border-color: rgba(248,113,113,0.4); }
+
+    .footer-bar { margin-top: auto; padding-top: 16px; display: flex; justify-content: flex-end; }
+    .btn-close-shift {
+      min-height: 40px;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
       color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
     }
+    .btn-close-shift:hover { color: var(--danger); border-color: var(--danger); }
 
-    .flow-breadcrumb span {
-      color: var(--accent);
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
+    .status-pill.online { background: var(--success-soft); color: #86efac; }
+    .status-pill.offline { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; }
+    .status-pill.syncing { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; }
+
+    .empty-state { text-align: center; padding: 28px 16px; color: var(--text-muted); border: 2px dashed var(--border); border-radius: var(--radius-sm); }
+
+    .sync-banner {
+      display: none;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #bae6fd;
+      font-size: 0.88rem;
+    }
+    .sync-banner.visible { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+    .sync-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .sync-banner .btn { min-height: 40px; padding: 8px 12px; font-size: 0.82rem; }
 
     .toast-container {
       position: fixed;
@@ -556,44 +651,11 @@
       gap: 8px;
       pointer-events: none;
     }
-
-    .toast {
-      padding: 14px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 0.92rem;
-      font-weight: 500;
-      box-shadow: var(--shadow);
-      animation: toastIn 0.25s ease;
-    }
-
-    .toast.success {
-      background: #14532d;
-      border: 1px solid var(--success);
-      color: #bbf7d0;
-    }
-
-    .toast.error {
-      background: #450a0a;
-      border: 1px solid var(--danger);
-      color: #fecaca;
-    }
-
-    .toast.info {
-      background: #0c4a6e;
-      border: 1px solid var(--info);
-      color: #bae6fd;
-    }
-
-    @keyframes toastIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
+    .toast { padding: 14px 16px; border-radius: var(--radius-sm); font-size: 0.92rem; font-weight: 500; box-shadow: var(--shadow); animation: toastIn 0.25s ease; }
+    .toast.success { background: #14532d; border: 1px solid var(--success); color: #bbf7d0; }
+    .toast.error { background: #450a0a; border: 1px solid var(--danger); color: #fecaca; }
+    .toast.info { background: #0c4a6e; border: 1px solid var(--info); color: #bae6fd; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
     .modal-overlay {
       position: fixed;
@@ -606,183 +668,30 @@
       justify-content: center;
       padding: 20px;
     }
+    .modal-overlay.open { display: flex; }
+    .modal-card { width: min(100%, 440px); background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 22px; box-shadow: var(--shadow); }
+    .modal-title { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; text-transform: uppercase; margin: 0 0 10px; }
+    .modal-text { margin: 0 0 20px; color: var(--text-muted); white-space: pre-line; }
+    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-    .modal-overlay.open {
-      display: flex;
-    }
-
-    .modal-card {
-      width: min(100%, 440px);
-      background: var(--bg-panel);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px 22px;
-      box-shadow: var(--shadow);
-    }
-
-    .modal-title {
-      font-family: var(--font-display);
-      font-size: 1.5rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      margin: 0 0 10px;
-    }
-
-    .modal-text {
-      margin: 0 0 20px;
-      color: var(--text-muted);
-    }
-
-    .modal-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .subform-card {
-      background: var(--bg-elevated);
-      border: 1px dashed var(--border-strong);
-      border-radius: var(--radius-sm);
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-
-    .subform-title {
-      margin: 0 0 12px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .footer-bar {
-      margin-top: auto;
-      padding-top: 16px;
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    .btn-close-shift {
-      min-height: 40px;
-      padding: 8px 14px;
-      font-size: 0.78rem;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: transparent;
-    }
-
-    .btn-close-shift:hover {
-      color: var(--danger);
-      border-color: var(--danger);
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .status-pill.online {
-      background: var(--success-soft);
-      color: #86efac;
-    }
-
-    .status-pill.offline {
-      background: rgba(148, 163, 184, 0.16);
-      color: #cbd5e1;
-    }
-
-    .status-pill.syncing {
-      background: rgba(56, 189, 248, 0.16);
-      color: #7dd3fc;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 28px 16px;
-      color: var(--text-muted);
-      border: 2px dashed var(--border);
-      border-radius: var(--radius-sm);
-    }
-
-    .sync-banner {
-      display: none;
-      margin-bottom: 12px;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      background: rgba(56, 189, 248, 0.12);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      color: #bae6fd;
-      font-size: 0.88rem;
-    }
-
-    .sync-banner.visible {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .sync-banner-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .sync-banner .btn {
-      min-height: 40px;
-      padding: 8px 12px;
-      font-size: 0.82rem;
-    }
+    .subform-card { background: var(--bg-elevated); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 16px; }
+    .subform-title { margin: 0 0 12px; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
     @media (max-width: 720px) {
-      .btn-grid-4 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .btn-grid-3 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .form-row {
-        grid-template-columns: 1fr;
-      }
-
-      .app-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .shift-badge {
-        text-align: left;
-      }
+      .btn-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .btn-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .count-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .qty-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .form-row { grid-template-columns: 1fr; }
+      .app-header { flex-direction: column; align-items: flex-start; }
+      .shift-badge { text-align: left; }
     }
 
     @media (max-width: 420px) {
-      .btn-grid-2 {
-        grid-template-columns: 1fr;
-      }
-
-      .modal-actions {
-        grid-template-columns: 1fr;
-      }
+      .btn-grid-2 { grid-template-columns: 1fr; }
+      .modal-actions { grid-template-columns: 1fr; }
+      .totals-cell .tv { font-size: 1.5rem; }
     }
   </style>
 </head>
@@ -797,6 +706,7 @@
         <span id="connectionStatus" class="status-pill offline">Sin conexión API</span>
         <strong id="supervisorDisplay">Sin supervisor</strong>
         <span id="operationalDayDisplay">Día operativo —</span>
+        <span id="modeTag" class="mode-tag" style="display:none;"></span>
       </div>
     </header>
 
@@ -808,16 +718,33 @@
       </div>
     </div>
 
-    <main id="screenSupervisor" class="screen active">
+    <!-- 1. LOGIN -->
+    <main id="screenLogin" class="screen active">
       <section class="panel">
         <h1 class="panel-title">Inicio de Turno</h1>
-        <p class="panel-desc">Ingresa el nombre del supervisor para habilitar la gestión de empacadores y el tablero de inspección.</p>
-        <form id="supervisorForm" method="post" action="#">
+        <p class="panel-desc">Ingresa el supervisor y la contraseña del turno. El acceso se valida en el servidor.</p>
+        <form id="loginForm" method="post" action="#">
           <div class="field-group">
             <label class="field-label" for="supervisorName">Nombre del Supervisor</label>
             <input class="field-input" id="supervisorName" name="supervisorName" type="text" autocomplete="name" placeholder="Ej. María González" required>
           </div>
-          <button class="btn btn-primary btn-block" type="submit">Continuar</button>
+          <div class="field-group">
+            <label class="field-label" for="password">Contraseña</label>
+            <input class="field-input" id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+
+          <label class="toggle-row" for="detailedModeToggle">
+            <span class="toggle-row-text">
+              <span class="toggle-row-title">Detailed Mode</span>
+              <span class="toggle-row-hint">Encendido: flujo detallado con Count. Apagado: flujo simple.</span>
+            </span>
+            <span class="toggle-switch">
+              <input type="checkbox" id="detailedModeToggle" checked>
+              <span class="toggle-slider"></span>
+            </span>
+          </label>
+
+          <button class="btn btn-primary btn-block" type="submit" id="btnLogin">Iniciar Turno</button>
         </form>
         <div class="toolbar-row" style="margin-top:14px;">
           <button class="btn btn-secondary btn-block" type="button" id="btnTestSheet">Probar conexión con Google Sheets</button>
@@ -828,10 +755,11 @@
       </section>
     </main>
 
+    <!-- 2. EMPACADORES -->
     <main id="screenPackers" class="screen">
       <section class="panel">
         <h1 class="panel-title">Empacadores del Turno</h1>
-        <p class="panel-desc">Selecciona quién trabaja en este turno. Solo los empacadores activos aparecerán en el tablero.</p>
+        <p class="panel-desc">Selecciona quién trabaja en este turno. El catálogo es compartido entre todos los dispositivos.</p>
 
         <div class="toolbar-row">
           <button class="btn btn-secondary" type="button" id="btnToggleAddPacker">Agregar Nuevo Empacador</button>
@@ -869,22 +797,24 @@
         <div class="packer-list" id="packerManageList"></div>
 
         <div class="toolbar-row">
-          <button class="btn btn-primary btn-block" type="button" id="btnConfirmPackers">Confirmar y Abrir Tablero</button>
+          <button class="btn btn-primary btn-block" type="button" id="btnConfirmPackers">Confirmar e Iniciar</button>
         </div>
       </section>
     </main>
 
+    <!-- 3. TABLERO SIMPLE -->
     <main id="screenBoard" class="screen">
       <section class="panel" style="flex:1;display:flex;flex-direction:column;">
         <h1 class="panel-title">Tablero de Inspección</h1>
-        <p class="panel-desc">Selecciona el defecto detectado. El flujo te guiará hasta registrar al empacador responsable.</p>
+        <p class="panel-desc">Modo simple. Selecciona el defecto detectado; el flujo te guiará hasta el empacador.</p>
         <div class="btn-grid btn-grid-2" id="defectButtons"></div>
         <div class="footer-bar">
-          <button class="btn-close-shift" type="button" id="btnCloseShift">Cerrar Turno</button>
+          <button class="btn-close-shift" type="button" id="btnCloseShiftSimple">Cerrar Turno</button>
         </div>
       </section>
     </main>
 
+    <!-- 3b. FLUJO SIMPLE -->
     <main id="screenFlow" class="screen">
       <section class="panel">
         <div class="flow-header">
@@ -901,12 +831,50 @@
       </section>
     </main>
 
+    <!-- 4. COUNT (detallado) -->
+    <main id="screenCount" class="screen">
+      <section class="panel" style="flex:1;display:flex;flex-direction:column;">
+        <div class="flow-header">
+          <div class="flow-step">Auditoría detallada</div>
+          <h1 class="panel-title">Count</h1>
+          <p class="panel-desc">Selecciona la cantidad total de papayas en la caja auditada.</p>
+        </div>
+        <div class="count-grid" id="countGrid"></div>
+        <div class="footer-bar">
+          <button class="btn-close-shift" type="button" id="btnCloseShiftDetailed">Cerrar Turno</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- 5. DEFECTOS DETALLADOS -->
+    <main id="screenDetailed" class="screen">
+      <section class="panel" style="flex:1;display:flex;flex-direction:column;">
+        <div class="flow-header">
+          <div class="flow-step" id="detailedStepLabel">Count 0</div>
+          <h1 class="panel-title">Defectos de la Caja</h1>
+          <p class="panel-desc">Asigna papayas a cada defecto. Una papaya no puede repetirse en dos defectos.</p>
+        </div>
+
+        <div class="totals-bar" id="totalsBar"></div>
+        <div class="detailed-list" id="detailedList"></div>
+
+        <div class="detailed-actions">
+          <button class="btn btn-primary btn-block btn-submit" type="button" id="btnSubmitAudit">Submit</button>
+          <div class="detailed-secondary">
+            <button class="btn btn-ghost" type="button" id="btnChangeCount">Cambiar Count</button>
+            <button class="btn btn-ghost btn-clear" type="button" id="btnClearSelections">Borrar selecciones</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 6. SELECCIÓN DE EMPACADOR -->
     <main id="screenPackerSelect" class="screen">
       <section class="panel">
         <div class="flow-header">
           <div class="flow-step">Empacador</div>
           <h1 class="panel-title">Seleccionar Empacador</h1>
-          <p class="panel-desc" id="packerSelectSummary">Identifica al empacador responsable del defecto.</p>
+          <p class="panel-desc" id="packerSelectSummary">Identifica al empacador responsable.</p>
           <div class="flow-breadcrumb" id="packerSelectBreadcrumb"></div>
         </div>
         <div class="search-bar">
@@ -931,10 +899,32 @@
   <div class="modal-overlay" id="modalCloseShift">
     <div class="modal-card">
       <h2 class="modal-title">Cerrar Turno</h2>
-      <p class="modal-text">¿Confirmas el cierre del turno? Se perderán los contadores locales de errores y deberás iniciar un nuevo turno con supervisor.</p>
+      <p class="modal-text">¿Confirmas el cierre del turno? Se limpiarán los contadores locales, el borrador y la sesión; deberás iniciar sesión de nuevo.</p>
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" id="btnCancelCloseShift">Cancelar</button>
         <button class="btn btn-danger" type="button" id="btnConfirmCloseShift">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalClearSel">
+    <div class="modal-card">
+      <h2 class="modal-title">Borrar Selecciones</h2>
+      <p class="modal-text">¿Deseas borrar todas las selecciones de esta auditoría?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCancelClearSel">Cancelar</button>
+        <button class="btn btn-danger" type="button" id="btnConfirmClearSel">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalChangeCount">
+    <div class="modal-card">
+      <h2 class="modal-title">Cambiar Count</h2>
+      <p class="modal-text">Ya hay defectos capturados en esta caja. Cambiar el Count borrará esas selecciones. ¿Continuar?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCancelChangeCount">Cancelar</button>
+        <button class="btn btn-danger" type="button" id="btnConfirmChangeCount">Aceptar</button>
       </div>
     </div>
   </div>
@@ -952,31 +942,46 @@
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbzF7xku3J5aCiAzKNQFuXt0QLkW-eGBSkHIS4ci6k4n7gSfAJGXOTuNDKnfvTq8Q4Rd/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbyZtnwX8C2hlWRRWmR2WHa9Q2GsHkXn55CK-kn9HypUcIhGxj1cdz37LWeVp9ReP-Io/exec",
         alertEmails: ["calidad@soaz.com", "supervision@soaz.com"],
         operationalDayStartHour: 16,
         storageKeys: {
-          packers: "soaz_packer_catalog_v1",
-          pendingQueue: "soaz_pending_records_v1",
-          shiftDraft: "soaz_shift_draft_v1",
-          searchMode: "soaz_packer_search_mode_v1"
+          packers: "soaz_packer_catalog_v2",
+          pendingQueue: "soaz_pending_records_v2",
+          shiftDraft: "soaz_shift_draft_v2",
+          searchMode: "soaz_packer_search_mode_v2",
+          token: "soaz_session_token_v2"
         }
       };
 
-      var DEFAULT_PACKERS = [];
-
-      var DEFECTS = [
-        { id: "mal_pesado", label: "Mal Pesado", hint: "Peso arriba, abajo o omitir detalle", critical: false },
+      // Modo simple: definición de defectos y rutas.
+      var SIMPLE_DEFECTS = [
+        { id: "mal_pesado", label: "Mal Pesado", hint: "Peso ↑ / Peso ↓ / Skip", critical: false },
         { id: "pudricion", label: "Pudrición", hint: "Fruta en deterioro", critical: false },
         { id: "tallones", label: "Tallones", hint: "Daño por tallo", critical: false },
-        { id: "calibre_revuelto", label: "Calibre Revuelto", hint: "Calibre predominante y mezclado", critical: false },
-        { id: "colores_mixtos", label: "Colores Mixtos", hint: "Color predominante y mezclado", critical: false },
-        { id: "mal_acomodo", label: "Mal Acomodo", hint: "Alerta crítica de acomodo", critical: true },
+        { id: "calibre_revuelto", label: "Calibre Revuelto", hint: "Predominante y mezclado", critical: false },
+        { id: "colores_mixtos", label: "Colores Mixtos", hint: "Predominante y mezclado", critical: false },
+        { id: "mal_acomodo", label: "Mal Acomodo", hint: "Acomodo deficiente", critical: true },
         { id: "mal_envuelto", label: "Mal Envuelto", hint: "Empaque deficiente", critical: false }
       ];
 
+      // Modo detallado: lista vertical (Mal Pesado siempre al final).
+      var DETAILED_DEFECTS = [
+        { id: "pudricion", label: "Pudrición", type: "qty" },
+        { id: "tallones", label: "Tallones", type: "qty" },
+        { id: "calibre_revuelto", label: "Calibre Revuelto", type: "group", variants: ["6", "8", "12", "16"] },
+        { id: "colores_mixtos", label: "Colores Mixtos", type: "group", variants: ["1/2", "3/4", "Madura"] },
+        { id: "mal_acomodo", label: "Mal Acomodo", type: "qty" },
+        { id: "mal_envuelto", label: "Mal Envuelto", type: "qty" },
+        { id: "mal_pesado", label: "Mal Pesado", type: "weight" }
+      ];
+
+      var COUNT_OPTIONS = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
       var state = {
+        token: "",
         supervisor: "",
+        detailedMode: true,
         shiftStartedAt: null,
         operationalDay: "",
         activePackerCodes: [],
@@ -986,6 +991,8 @@
         alertSent: {},
         currentFlow: null,
         flowStack: [],
+        currentAudit: null,
+        pendingContext: "simple",
         pendingQueue: [],
         isSyncing: false,
         isRegistering: false,
@@ -993,71 +1000,53 @@
         packerSearchMode: "both",
         packerSelectSearchQuery: "",
         packerSelectSearchMode: "both",
-        shiftMarkerSent: false
+        shiftMarkerSent: false,
+        ui: { expandedDefect: null, editingDefect: null, pendingVariant: null }
       };
 
       var dom = {};
 
-      function byId(id) {
-        return document.getElementById(id);
-      }
-
-      function pad2(value) {
-        return String(value).padStart(2, "0");
-      }
+      function byId(id) { return document.getElementById(id); }
+      function pad2(v) { return String(v).padStart(2, "0"); }
 
       function formatDateKey(date) {
         return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate());
       }
-
       function formatDisplayDate(dateKey) {
-        var parts = dateKey.split("-");
-        return parts[2] + "/" + parts[1] + "/" + parts[0];
+        var p = dateKey.split("-");
+        return p[2] + "/" + p[1] + "/" + p[0];
       }
-
       function getOperationalDay(date) {
-        var reference = new Date(date.getTime());
-        if (reference.getHours() < CONFIG.operationalDayStartHour) {
-          reference.setDate(reference.getDate() - 1);
+        var ref = new Date(date.getTime());
+        if (ref.getHours() < CONFIG.operationalDayStartHour) {
+          ref.setDate(ref.getDate() - 1);
         }
-        return formatDateKey(reference);
+        return formatDateKey(ref);
       }
-
-      function nowIso() {
-        return new Date().toISOString();
-      }
+      function nowIso() { return new Date().toISOString(); }
+      function uid(prefix) { return prefix + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8); }
 
       function loadJson(key, fallback) {
         try {
           var raw = localStorage.getItem(key);
-          if (!raw) {
-            return fallback;
-          }
+          if (!raw) { return fallback; }
           return JSON.parse(raw);
-        } catch (error) {
-          return fallback;
-        }
+        } catch (e) { return fallback; }
       }
-
-      function saveJson(key, value) {
-        localStorage.setItem(key, JSON.stringify(value));
-      }
+      function saveJson(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 
       function showToast(message, type) {
-        var container = dom.toastContainer;
         var toast = document.createElement("div");
         toast.className = "toast " + (type || "info");
         toast.textContent = message;
-        container.appendChild(toast);
-        window.setTimeout(function () {
-          toast.remove();
-        }, 3600);
+        dom.toastContainer.appendChild(toast);
+        window.setTimeout(function () { toast.remove(); }, 3600);
       }
 
       function updateSyncBanner() {
         if (state.pendingQueue.length > 0) {
           dom.syncBanner.classList.add("visible");
-          dom.syncBannerText.textContent = "Registros pendientes: " + state.pendingQueue.length + ". Pulsa Reintentar envío para mandarlos a Google Sheets.";
+          dom.syncBannerText.textContent = "Registros pendientes: " + state.pendingQueue.length + ". Pulsa Reintentar envío.";
         } else {
           dom.syncBanner.classList.remove("visible");
         }
@@ -1066,96 +1055,63 @@
       function setConnectionStatus(mode) {
         var el = dom.connectionStatus;
         el.className = "status-pill " + mode;
-        if (mode === "online") {
-          el.textContent = "API lista";
-        } else if (mode === "syncing") {
-          el.textContent = "Sincronizando";
-        } else {
-          el.textContent = "Modo local";
-        }
+        if (mode === "online") { el.textContent = "API lista"; }
+        else if (mode === "syncing") { el.textContent = "Sincronizando"; }
+        else { el.textContent = "Modo local"; }
       }
 
       function updateHeader() {
         dom.supervisorDisplay.textContent = state.supervisor || "Sin supervisor";
         dom.operationalDayDisplay.textContent = "Día operativo " + (state.operationalDay ? formatDisplayDate(state.operationalDay) : "—");
+        if (state.token) {
+          dom.modeTag.style.display = "inline-block";
+          dom.modeTag.className = "mode-tag " + (state.detailedMode ? "detailed" : "simple");
+          dom.modeTag.textContent = state.detailedMode ? "Detallado" : "Simple";
+        } else {
+          dom.modeTag.style.display = "none";
+        }
       }
 
-      function showScreen(screenId) {
+      function showScreen(id) {
         var screens = document.querySelectorAll(".screen");
-        for (var i = 0; i < screens.length; i += 1) {
-          screens[i].classList.remove("active");
-        }
-        byId(screenId).classList.add("active");
+        for (var i = 0; i < screens.length; i += 1) { screens[i].classList.remove("active"); }
+        byId(id).classList.add("active");
       }
+
+      function goHome() {
+        if (state.detailedMode) { showScreen("screenCount"); }
+        else { showScreen("screenBoard"); }
+      }
+
+      /* ---------- Empacadores ---------- */
 
       function getPackerByCode(code) {
         for (var i = 0; i < state.packerCatalog.length; i += 1) {
-          if (state.packerCatalog[i].code === code) {
-            return state.packerCatalog[i];
-          }
+          if (state.packerCatalog[i].code === code) { return state.packerCatalog[i]; }
         }
         return null;
       }
 
       function getActivePackers() {
-        var seen = {};
-        var result = [];
+        var seen = {}, result = [];
         for (var i = 0; i < state.activePackerCodes.length; i += 1) {
           var code = state.activePackerCodes[i];
-          if (seen[code]) {
-            continue;
-          }
+          if (seen[code]) { continue; }
           seen[code] = true;
           var packer = getPackerByCode(code);
-          if (packer && packer.active !== false) {
-            result.push(packer);
-          }
+          if (packer && packer.active !== false) { result.push(packer); }
         }
-        result.sort(function (a, b) {
-          return a.code.localeCompare(b.code);
-        });
+        result.sort(function (a, b) { return a.code.localeCompare(b.code); });
         return result;
       }
 
       function dedupeActivePackerCodes() {
-        var seen = {};
-        var clean = [];
+        var seen = {}, clean = [];
         for (var i = 0; i < state.activePackerCodes.length; i += 1) {
           var code = state.activePackerCodes[i];
-          if (!seen[code]) {
-            seen[code] = true;
-            clean.push(code);
-          }
+          if (!seen[code]) { seen[code] = true; clean.push(code); }
         }
         state.activePackerCodes = clean;
-      }
-
-      function deletePackerPermanently(code) {
-        var packer = getPackerByCode(code);
-        var label = packer ? (packer.code + " · " + packer.name) : code;
-        var confirmed = window.confirm("¿Eliminar permanentemente al empacador " + label + "?\nSe borrará de la base compartida (Google Sheets).");
-        if (!confirmed) {
-          return;
-        }
-
-        apiRequest({
-          action: "delete_packer",
-          packerCode: code
-        }).then(function (data) {
-          applyPackerCatalog(data.packers || []);
-          var idx = state.activePackerCodes.indexOf(code);
-          if (idx !== -1) {
-            state.activePackerCodes.splice(idx, 1);
-          }
-          delete state.errorCounts[code];
-          delete state.errorHistory[code];
-          delete state.alertSent[code];
-          saveShiftDraft();
-          renderPackerManageList();
-          showToast("Empacador " + code + " eliminado de la base compartida.", "info");
-        }).catch(function (error) {
-          showToast(error.message || "No se pudo eliminar en Sheets", "error");
-        });
       }
 
       function applyPackerCatalog(packers) {
@@ -1165,61 +1121,51 @@
             name: String(item.name || "").trim(),
             active: item.active !== false
           };
-        }).filter(function (item) {
-          return Boolean(item.code);
-        });
+        }).filter(function (item) { return Boolean(item.code); });
         savePackerCatalog();
       }
 
       function refreshPackersFromCloud(showMessages) {
         return apiRequest({ action: "list_packers" }).then(function (data) {
           applyPackerCatalog(data.packers || []);
-          // Quitar del turno códigos que ya no existen en la base
           state.activePackerCodes = state.activePackerCodes.filter(function (code) {
             return Boolean(getPackerByCode(code));
           });
           renderPackerManageList();
-          if (showMessages) {
-            showToast("Empacadores sincronizados (" + state.packerCatalog.length + ").", "success");
-          }
+          if (showMessages) { showToast("Empacadores sincronizados (" + state.packerCatalog.length + ").", "success"); }
           return data;
         }).catch(function (error) {
-          if (showMessages) {
-            showToast("Sin nube: usando lista local. " + (error.message || ""), "info");
-          }
+          if (showMessages) { showToast("Sin nube: usando lista local. " + (error.message || ""), "info"); }
           renderPackerManageList();
           throw error;
         });
       }
 
-      function savePackerCatalog() {
-        saveJson(CONFIG.storageKeys.packers, state.packerCatalog);
-      }
-
-      function savePendingQueue() {
-        saveJson(CONFIG.storageKeys.pendingQueue, state.pendingQueue);
-        updateSyncBanner();
-      }
+      function savePackerCatalog() { saveJson(CONFIG.storageKeys.packers, state.packerCatalog); }
+      function savePendingQueue() { saveJson(CONFIG.storageKeys.pendingQueue, state.pendingQueue); updateSyncBanner(); }
 
       function saveShiftDraft() {
         saveJson(CONFIG.storageKeys.shiftDraft, {
+          token: state.token,
           supervisor: state.supervisor,
+          detailedMode: state.detailedMode,
           shiftStartedAt: state.shiftStartedAt,
           operationalDay: state.operationalDay,
           activePackerCodes: state.activePackerCodes,
           errorCounts: state.errorCounts,
           errorHistory: state.errorHistory,
           alertSent: state.alertSent,
-          shiftMarkerSent: state.shiftMarkerSent
+          shiftMarkerSent: state.shiftMarkerSent,
+          currentAudit: state.currentAudit
         });
       }
 
       function loadShiftDraft() {
         var draft = loadJson(CONFIG.storageKeys.shiftDraft, null);
-        if (!draft || !draft.supervisor) {
-          return false;
-        }
+        if (!draft || !draft.supervisor || !draft.token) { return false; }
+        state.token = draft.token;
         state.supervisor = draft.supervisor;
+        state.detailedMode = draft.detailedMode !== false;
         state.shiftStartedAt = draft.shiftStartedAt;
         state.operationalDay = draft.operationalDay;
         state.activePackerCodes = draft.activePackerCodes || [];
@@ -1227,11 +1173,14 @@
         state.errorHistory = draft.errorHistory || {};
         state.alertSent = draft.alertSent || {};
         state.shiftMarkerSent = Boolean(draft.shiftMarkerSent);
+        state.currentAudit = draft.currentAudit || null;
         return true;
       }
 
       function resetShiftState() {
+        state.token = "";
         state.supervisor = "";
+        state.detailedMode = true;
         state.shiftStartedAt = null;
         state.operationalDay = "";
         state.activePackerCodes = [];
@@ -1240,63 +1189,49 @@
         state.alertSent = {};
         state.currentFlow = null;
         state.flowStack = [];
+        state.currentAudit = null;
         state.isRegistering = false;
         state.shiftMarkerSent = false;
+        state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         localStorage.removeItem(CONFIG.storageKeys.shiftDraft);
+        localStorage.removeItem(CONFIG.storageKeys.token);
       }
+
+      /* ---------- Búsqueda ---------- */
 
       function normalizeSearch(text) {
-        return String(text || "")
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .trim();
+        return String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
       }
-
       function packerMatchesSearch(packer, query, mode) {
-        if (!query) {
-          return true;
-        }
+        if (!query) { return true; }
         var q = normalizeSearch(query);
         var code = normalizeSearch(packer.code);
         var name = normalizeSearch(packer.name);
-        if (mode === "code") {
-          return code.indexOf(q) !== -1;
-        }
-        if (mode === "name") {
-          return name.indexOf(q) !== -1;
-        }
+        if (mode === "code") { return code.indexOf(q) !== -1; }
+        if (mode === "name") { return name.indexOf(q) !== -1; }
         return code.indexOf(q) !== -1 || name.indexOf(q) !== -1;
       }
-
       function getSelectedSearchMode(groupName) {
         var selected = document.querySelector('input[name="' + groupName + '"]:checked');
         return selected ? selected.value : "both";
       }
-
       function setSearchModeRadios(groupName, mode) {
         var radios = document.querySelectorAll('input[name="' + groupName + '"]');
-        for (var i = 0; i < radios.length; i += 1) {
-          radios[i].checked = radios[i].value === mode;
-        }
+        for (var i = 0; i < radios.length; i += 1) { radios[i].checked = radios[i].value === mode; }
       }
 
       function renderPackerManageList() {
         var container = dom.packerManageList;
         container.innerHTML = "";
-
         if (state.packerCatalog.length === 0) {
           container.innerHTML = '<div class="empty-state">No hay empacadores registrados.</div>';
           return;
         }
-
         var query = state.packerSearchQuery;
         var mode = state.packerSearchMode || "both";
         var sorted = state.packerCatalog.slice().filter(function (packer) {
           return packerMatchesSearch(packer, query, mode);
-        }).sort(function (a, b) {
-          return a.code.localeCompare(b.code);
-        });
+        }).sort(function (a, b) { return a.code.localeCompare(b.code); });
 
         if (sorted.length === 0) {
           container.innerHTML = '<div class="empty-state">Ningún empacador coincide con la búsqueda.</div>';
@@ -1310,15 +1245,12 @@
 
           var info = document.createElement("div");
           info.className = "packer-row-info";
-
           var codeEl = document.createElement("div");
           codeEl.className = "packer-row-code";
           codeEl.textContent = packer.code;
-
           var nameEl = document.createElement("div");
           nameEl.className = "packer-row-name";
           nameEl.textContent = packer.name;
-
           info.appendChild(codeEl);
           info.appendChild(nameEl);
 
@@ -1332,12 +1264,8 @@
           checkbox.addEventListener("change", function (event) {
             var code = event.target.dataset.code;
             var index = state.activePackerCodes.indexOf(code);
-            if (event.target.checked && index === -1) {
-              state.activePackerCodes.push(code);
-            }
-            if (!event.target.checked && index !== -1) {
-              state.activePackerCodes.splice(index, 1);
-            }
+            if (event.target.checked && index === -1) { state.activePackerCodes.push(code); }
+            if (!event.target.checked && index !== -1) { state.activePackerCodes.splice(index, 1); }
           });
           toggleLabel.appendChild(checkbox);
           toggleLabel.appendChild(document.createTextNode("En turno"));
@@ -1350,31 +1278,21 @@
           toggleActiveBtn.addEventListener("click", function (event) {
             var targetCode = event.currentTarget.dataset.code;
             var target = getPackerByCode(targetCode);
-            if (!target) {
-              return;
-            }
+            if (!target) { return; }
             var nextActive = target.active === false;
             apiRequest({
               action: "upsert_packer",
-              packer: {
-                code: target.code,
-                name: target.name,
-                active: nextActive
-              }
+              packer: { code: target.code, name: target.name, active: nextActive }
             }).then(function (data) {
               applyPackerCatalog(data.packers || []);
               if (!nextActive) {
                 var idx = state.activePackerCodes.indexOf(targetCode);
-                if (idx !== -1) {
-                  state.activePackerCodes.splice(idx, 1);
-                }
+                if (idx !== -1) { state.activePackerCodes.splice(idx, 1); }
               }
               saveShiftDraft();
               renderPackerManageList();
-              showToast(nextActive ? "Empacador activado en la base." : "Empacador desactivado en la base.", "success");
-            }).catch(function (error) {
-              showToast(error.message || "No se pudo actualizar en Sheets", "error");
-            });
+              showToast(nextActive ? "Empacador activado." : "Empacador desactivado.", "success");
+            }).catch(function (error) { showToast(error.message || "No se pudo actualizar en Sheets", "error"); });
           });
 
           var deleteBtn = document.createElement("button");
@@ -1394,25 +1312,40 @@
         }
       }
 
+      function deletePackerPermanently(code) {
+        var packer = getPackerByCode(code);
+        var label = packer ? (packer.code + " · " + packer.name) : code;
+        if (!window.confirm("¿Eliminar permanentemente al empacador " + label + "?\nSe borrará de la base compartida.")) { return; }
+        apiRequest({ action: "delete_packer", packerCode: code }).then(function (data) {
+          applyPackerCatalog(data.packers || []);
+          var idx = state.activePackerCodes.indexOf(code);
+          if (idx !== -1) { state.activePackerCodes.splice(idx, 1); }
+          delete state.errorCounts[code];
+          delete state.errorHistory[code];
+          delete state.alertSent[code];
+          saveShiftDraft();
+          renderPackerManageList();
+          showToast("Empacador " + code + " eliminado.", "info");
+        }).catch(function (error) { showToast(error.message || "No se pudo eliminar en Sheets", "error"); });
+      }
+
+      /* ---------- Modo simple ---------- */
+
       function renderDefectButtons() {
         var container = dom.defectButtons;
         container.innerHTML = "";
-
-        for (var i = 0; i < DEFECTS.length; i += 1) {
-          var defect = DEFECTS[i];
+        for (var i = 0; i < SIMPLE_DEFECTS.length; i += 1) {
+          var defect = SIMPLE_DEFECTS[i];
           var button = document.createElement("button");
           button.type = "button";
           button.className = "btn-defect" + (defect.critical ? " critical" : "");
           button.dataset.defectId = defect.id;
-
           var label = document.createElement("span");
           label.className = "btn-defect-label";
           label.textContent = defect.label;
-
           var hint = document.createElement("span");
           hint.className = "btn-defect-hint";
           hint.textContent = defect.hint;
-
           button.appendChild(label);
           button.appendChild(hint);
           button.addEventListener("click", function (event) {
@@ -1422,90 +1355,71 @@
         }
       }
 
-      function createFlowContext(defectId) {
-        return {
-          defectId: defectId,
-          defectLabel: getDefectLabel(defectId),
-          details: {},
-          step: "init"
-        };
-      }
-
-      function getDefectLabel(defectId) {
-        for (var i = 0; i < DEFECTS.length; i += 1) {
-          if (DEFECTS[i].id === defectId) {
-            return DEFECTS[i].label;
-          }
+      function getSimpleDefectLabel(id) {
+        for (var i = 0; i < SIMPLE_DEFECTS.length; i += 1) {
+          if (SIMPLE_DEFECTS[i].id === id) { return SIMPLE_DEFECTS[i].label; }
         }
-        return defectId;
+        return id;
       }
 
       function startDefectFlow(defectId) {
-        state.currentFlow = createFlowContext(defectId);
+        state.currentFlow = { defectId: defectId, defectLabel: getSimpleDefectLabel(defectId), details: {} };
         state.flowStack = [];
         advanceFlow();
       }
 
       function advanceFlow() {
         var flow = state.currentFlow;
-        if (!flow) {
-          return;
-        }
+        if (!flow) { return; }
 
         if (flow.defectId === "mal_pesado") {
           if (!flow.details.peso) {
             renderFlowStep({
-              stepLabel: "Paso 1 · Peso",
-              title: "Mal Pesado",
-              description: "Indica si el peso está arriba, abajo o omite el detalle.",
+              stepLabel: "Paso 1 · Peso", title: "Mal Pesado",
+              description: "Indica si el peso está arriba, abajo u omite el detalle.",
               breadcrumb: flow.defectLabel,
               options: [
-                { value: "peso_arriba", label: "Peso ↑", action: function () { flow.details.peso = "Peso ↑"; goToPackerSelect(); } },
-                { value: "peso_abajo", label: "Peso ↓", action: function () { flow.details.peso = "Peso ↓"; goToPackerSelect(); } },
-                { value: "skip", label: "Skip", action: function () { flow.details.peso = "Skip"; goToPackerSelect(); } }
-              ]
+                { label: "Peso ↑", action: function () { flow.details.peso = "Peso ↑"; goToPackerSelect("simple"); } },
+                { label: "Peso ↓", action: function () { flow.details.peso = "Peso ↓"; goToPackerSelect("simple"); } },
+                { label: "Skip", action: function () { flow.details.peso = "Skip"; goToPackerSelect("simple"); } }
+              ], gridClass: "btn-grid-3"
             });
             return;
           }
         }
 
         if (flow.defectId === "pudricion" || flow.defectId === "tallones" || flow.defectId === "mal_acomodo" || flow.defectId === "mal_envuelto") {
-          goToPackerSelect();
+          goToPackerSelect("simple");
           return;
         }
 
         if (flow.defectId === "calibre_revuelto") {
           if (!flow.details.calibrePredominante) {
             renderFlowStep({
-              stepLabel: "Paso 1 · Calibre",
-              title: "Calibre Predominante",
-              description: "Selecciona el calibre predominante o usa Skip para ir directo al empacador.",
+              stepLabel: "Paso 1 · Calibre", title: "Calibre Predominante",
+              description: "Selecciona el calibre predominante o Skip.",
               breadcrumb: flow.defectLabel,
               options: [
-                { value: "6", label: "6", action: function () { flow.details.calibrePredominante = "6"; advanceFlow(); } },
-                { value: "8", label: "8", action: function () { flow.details.calibrePredominante = "8"; advanceFlow(); } },
-                { value: "12", label: "12", action: function () { flow.details.calibrePredominante = "12"; advanceFlow(); } },
-                { value: "16", label: "16", action: function () { flow.details.calibrePredominante = "16"; advanceFlow(); } },
-                { value: "skip", label: "Skip", action: function () { flow.details.calibrePredominante = "Skip"; goToPackerSelect(); } }
-              ],
-              gridClass: "btn-grid-3"
+                { label: "6", action: function () { flow.details.calibrePredominante = "6"; advanceFlow(); } },
+                { label: "8", action: function () { flow.details.calibrePredominante = "8"; advanceFlow(); } },
+                { label: "12", action: function () { flow.details.calibrePredominante = "12"; advanceFlow(); } },
+                { label: "16", action: function () { flow.details.calibrePredominante = "16"; advanceFlow(); } },
+                { label: "Skip", action: function () { flow.details.calibrePredominante = "Skip"; goToPackerSelect("simple"); } }
+              ], gridClass: "btn-grid-3"
             });
             return;
           }
-
           if (flow.details.calibrePredominante !== "Skip" && !flow.details.calibreMezclado) {
             renderFlowStep({
-              stepLabel: "Paso 2 · Calibre",
-              title: "Calibre Mezclado",
-              description: "Selecciona el calibre mezclado detectado en la caja.",
+              stepLabel: "Paso 2 · Calibre", title: "Calibre Mezclado",
+              description: "Selecciona el calibre mezclado.",
               breadcrumb: flow.defectLabel + " · Predominante " + flow.details.calibrePredominante,
               options: [
-                { value: "6", label: "6", action: function () { flow.details.calibreMezclado = "6"; goToPackerSelect(); } },
-                { value: "8", label: "8", action: function () { flow.details.calibreMezclado = "8"; goToPackerSelect(); } },
-                { value: "12", label: "12", action: function () { flow.details.calibreMezclado = "12"; goToPackerSelect(); } },
-                { value: "16", label: "16", action: function () { flow.details.calibreMezclado = "16"; goToPackerSelect(); } }
-              ],
-              gridClass: "btn-grid-4"
+                { label: "6", action: function () { flow.details.calibreMezclado = "6"; goToPackerSelect("simple"); } },
+                { label: "8", action: function () { flow.details.calibreMezclado = "8"; goToPackerSelect("simple"); } },
+                { label: "12", action: function () { flow.details.calibreMezclado = "12"; goToPackerSelect("simple"); } },
+                { label: "16", action: function () { flow.details.calibreMezclado = "16"; goToPackerSelect("simple"); } }
+              ], gridClass: "btn-grid-4"
             });
             return;
           }
@@ -1514,39 +1428,34 @@
         if (flow.defectId === "colores_mixtos") {
           if (!flow.details.colorPredominante) {
             renderFlowStep({
-              stepLabel: "Paso 1 · Color",
-              title: "Color Predominante",
-              description: "Selecciona el color predominante o usa Skip para ir directo al empacador.",
+              stepLabel: "Paso 1 · Color", title: "Color Predominante",
+              description: "Selecciona el color predominante o Skip.",
               breadcrumb: flow.defectLabel,
               options: [
-                { value: "1/2", label: "1/2", action: function () { flow.details.colorPredominante = "1/2"; advanceFlow(); } },
-                { value: "3/4", label: "3/4", action: function () { flow.details.colorPredominante = "3/4"; advanceFlow(); } },
-                { value: "madura", label: "Madura", action: function () { flow.details.colorPredominante = "Madura"; advanceFlow(); } },
-                { value: "skip", label: "Skip", action: function () { flow.details.colorPredominante = "Skip"; goToPackerSelect(); } }
-              ],
-              gridClass: "btn-grid-2"
+                { label: "1/2", action: function () { flow.details.colorPredominante = "1/2"; advanceFlow(); } },
+                { label: "3/4", action: function () { flow.details.colorPredominante = "3/4"; advanceFlow(); } },
+                { label: "Madura", action: function () { flow.details.colorPredominante = "Madura"; advanceFlow(); } },
+                { label: "Skip", action: function () { flow.details.colorPredominante = "Skip"; goToPackerSelect("simple"); } }
+              ], gridClass: "btn-grid-2"
             });
             return;
           }
-
           if (flow.details.colorPredominante !== "Skip" && !flow.details.colorMezclado) {
             renderFlowStep({
-              stepLabel: "Paso 2 · Color",
-              title: "Color Mezclado",
-              description: "Selecciona el color mezclado detectado en la caja.",
+              stepLabel: "Paso 2 · Color", title: "Color Mezclado",
+              description: "Selecciona el color mezclado.",
               breadcrumb: flow.defectLabel + " · Predominante " + flow.details.colorPredominante,
               options: [
-                { value: "1/2", label: "1/2", action: function () { flow.details.colorMezclado = "1/2"; goToPackerSelect(); } },
-                { value: "3/4", label: "3/4", action: function () { flow.details.colorMezclado = "3/4"; goToPackerSelect(); } },
-                { value: "madura", label: "Madura", action: function () { flow.details.colorMezclado = "Madura"; goToPackerSelect(); } }
-              ],
-              gridClass: "btn-grid-3"
+                { label: "1/2", action: function () { flow.details.colorMezclado = "1/2"; goToPackerSelect("simple"); } },
+                { label: "3/4", action: function () { flow.details.colorMezclado = "3/4"; goToPackerSelect("simple"); } },
+                { label: "Madura", action: function () { flow.details.colorMezclado = "Madura"; goToPackerSelect("simple"); } }
+              ], gridClass: "btn-grid-3"
             });
             return;
           }
         }
 
-        goToPackerSelect();
+        goToPackerSelect("simple");
       }
 
       function renderFlowStep(config) {
@@ -1554,70 +1463,480 @@
         dom.flowTitle.textContent = config.title;
         dom.flowDescription.textContent = config.description;
         dom.flowBreadcrumb.innerHTML = config.breadcrumb ? "Ruta: <span>" + config.breadcrumb + "</span>" : "";
-
         dom.flowOptions.className = "btn-grid " + (config.gridClass || "btn-grid-2");
         dom.flowOptions.innerHTML = "";
-
         for (var i = 0; i < config.options.length; i += 1) {
-          var option = config.options[i];
           var button = document.createElement("button");
           button.type = "button";
           button.className = "btn-option";
-          button.textContent = option.label;
-          button.addEventListener("click", function (event) {
-            var index = Number(event.currentTarget.dataset.index);
-            config.options[index].action();
-          });
+          button.textContent = config.options[i].label;
           button.dataset.index = String(i);
+          button.addEventListener("click", function (event) {
+            config.options[Number(event.currentTarget.dataset.index)].action();
+          });
           dom.flowOptions.appendChild(button);
         }
-
         showScreen("screenFlow");
       }
 
-      function buildFlowSummary() {
+      function buildSimpleSummary() {
         var flow = state.currentFlow;
-        if (!flow) {
-          return "";
-        }
-
+        if (!flow) { return ""; }
         var parts = [flow.defectLabel];
-
-        if (flow.details.peso) {
-          parts.push(flow.details.peso);
-        }
-        if (flow.details.calibrePredominante) {
-          parts.push("Predominante " + flow.details.calibrePredominante);
-        }
-        if (flow.details.calibreMezclado) {
-          parts.push("Mezclado " + flow.details.calibreMezclado);
-        }
-        if (flow.details.colorPredominante) {
-          parts.push("Predominante " + flow.details.colorPredominante);
-        }
-        if (flow.details.colorMezclado) {
-          parts.push("Mezclado " + flow.details.colorMezclado);
-        }
-
+        if (flow.details.peso) { parts.push(flow.details.peso); }
+        if (flow.details.calibrePredominante) { parts.push("Predominante " + flow.details.calibrePredominante); }
+        if (flow.details.calibreMezclado) { parts.push("Mezclado " + flow.details.calibreMezclado); }
+        if (flow.details.colorPredominante) { parts.push("Predominante " + flow.details.colorPredominante); }
+        if (flow.details.colorMezclado) { parts.push("Mezclado " + flow.details.colorMezclado); }
         return parts.join(" · ");
       }
 
-      function goToPackerSelect() {
+      function undoLastSimpleDetail() {
+        var flow = state.currentFlow;
+        if (!flow) { return false; }
+        if (flow.defectId === "mal_pesado" && flow.details.peso) { delete flow.details.peso; return true; }
+        if (flow.defectId === "calibre_revuelto") {
+          if (flow.details.calibreMezclado) { delete flow.details.calibreMezclado; return true; }
+          if (flow.details.calibrePredominante) { delete flow.details.calibrePredominante; return true; }
+        }
+        if (flow.defectId === "colores_mixtos") {
+          if (flow.details.colorMezclado) { delete flow.details.colorMezclado; return true; }
+          if (flow.details.colorPredominante) { delete flow.details.colorPredominante; return true; }
+        }
+        return false;
+      }
+
+      function cancelFlow() {
+        state.currentFlow = null;
+        state.flowStack = [];
+        goHome();
+      }
+
+      function flowBack() {
+        if (!state.currentFlow) { goHome(); return; }
+        if (undoLastSimpleDetail()) { advanceFlow(); return; }
+        cancelFlow();
+      }
+
+      /* ---------- Modo detallado: auditoría ---------- */
+
+      function newAudit() {
+        return { auditId: uid("audit"), count: null, defects: {}, malPesado: null };
+      }
+
+      function startNewBox() {
+        state.currentAudit = newAudit();
+        state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
+        saveShiftDraft();
+        renderCountGrid();
+        showScreen("screenCount");
+      }
+
+      function renderCountGrid() {
+        var grid = dom.countGrid;
+        grid.innerHTML = "";
+        for (var i = 0; i < COUNT_OPTIONS.length; i += 1) {
+          var n = COUNT_OPTIONS[i];
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "btn-count";
+          btn.textContent = String(n);
+          btn.dataset.count = String(n);
+          btn.addEventListener("click", function (event) {
+            pickCount(Number(event.currentTarget.dataset.count));
+          });
+          grid.appendChild(btn);
+        }
+      }
+
+      function pickCount(n) {
+        if (!state.currentAudit) { state.currentAudit = newAudit(); }
+        state.currentAudit.count = n;
+        state.currentAudit.defects = {};
+        state.currentAudit.malPesado = null;
+        state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
+        saveShiftDraft();
+        renderDetailedScreen();
+        showScreen("screenDetailed");
+      }
+
+      function auditAssigned() {
+        var audit = state.currentAudit;
+        if (!audit) { return 0; }
+        var total = 0;
+        DETAILED_DEFECTS.forEach(function (def) {
+          var entry = audit.defects[def.id];
+          if (!entry) { return; }
+          if (def.type === "qty") { total += Number(entry.qty) || 0; }
+          if (def.type === "group" && entry.groups) {
+            entry.groups.forEach(function (g) { total += Number(g.qty) || 0; });
+          }
+        });
+        return total;
+      }
+
+      function auditAvailable() {
+        var audit = state.currentAudit;
+        if (!audit || audit.count == null) { return 0; }
+        return audit.count - auditAssigned();
+      }
+
+      function auditHasDefect() {
+        return auditAssigned() > 0 || Boolean(state.currentAudit && state.currentAudit.malPesado);
+      }
+
+      function renderTotals() {
+        var audit = state.currentAudit;
+        var count = audit && audit.count != null ? audit.count : 0;
+        var assigned = auditAssigned();
+        var available = count - assigned;
+        var buenas = count - assigned;
+        dom.detailedStepLabel.textContent = "Count " + count;
+        dom.totalsBar.innerHTML = "";
+        var cells = [
+          { v: count, l: "Count total", cls: "" },
+          { v: assigned, l: "Con defecto", cls: "assigned" },
+          { v: available, l: "Disponibles", cls: "avail" },
+          { v: buenas, l: "Buenas", cls: "good" }
+        ];
+        cells.forEach(function (c) {
+          var cell = document.createElement("div");
+          cell.className = "totals-cell " + c.cls;
+          var v = document.createElement("div");
+          v.className = "tv";
+          v.textContent = String(c.v);
+          var l = document.createElement("div");
+          l.className = "tl";
+          l.textContent = c.l;
+          cell.appendChild(v);
+          cell.appendChild(l);
+          dom.totalsBar.appendChild(cell);
+        });
+      }
+
+      function makeQtyButton(n, onPick) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn-qty";
+        b.textContent = String(n);
+        b.addEventListener("click", function () { onPick(n); });
+        return b;
+      }
+
+      function renderDetailedScreen() {
+        renderTotals();
+        var list = dom.detailedList;
+        list.innerHTML = "";
+        var available = auditAvailable();
+
+        DETAILED_DEFECTS.forEach(function (def) {
+          var audit = state.currentAudit;
+          var entry = audit.defects[def.id];
+          var card = document.createElement("div");
+          card.className = "ddefect";
+
+          var hasValue = false;
+          var badgeText = "";
+
+          if (def.type === "qty") {
+            hasValue = Boolean(entry && entry.qty);
+            badgeText = hasValue ? (entry.qty + " papaya" + (entry.qty > 1 ? "s" : "")) : "Agregar";
+          } else if (def.type === "group") {
+            var groupTotal = 0;
+            if (entry && entry.groups) { entry.groups.forEach(function (g) { groupTotal += Number(g.qty) || 0; }); }
+            hasValue = groupTotal > 0;
+            badgeText = hasValue ? (groupTotal + " en " + entry.groups.length + " grupo" + (entry.groups.length > 1 ? "s" : "")) : "Agregar grupos";
+          } else if (def.type === "weight") {
+            hasValue = Boolean(audit.malPesado);
+            badgeText = hasValue ? audit.malPesado : "Caja completa";
+          }
+
+          if (hasValue) { card.classList.add("has-value"); }
+
+          // Deshabilitar defectos que requieren cantidad si no hay disponibles y no tienen valor.
+          var disabled = (def.type === "qty" || def.type === "group") && available <= 0 && !hasValue;
+          if (disabled) { card.classList.add("disabled"); }
+
+          var head = document.createElement("button");
+          head.type = "button";
+          head.className = "ddefect-head";
+          head.disabled = disabled;
+          var title = document.createElement("span");
+          title.className = "ddefect-title";
+          title.textContent = def.label;
+          var badge = document.createElement("span");
+          badge.className = "ddefect-badge" + (hasValue ? "" : " muted");
+          badge.textContent = badgeText;
+          head.appendChild(title);
+          head.appendChild(badge);
+          head.addEventListener("click", function () {
+            if (state.ui.expandedDefect === def.id) {
+              state.ui.expandedDefect = null;
+            } else {
+              state.ui.expandedDefect = def.id;
+            }
+            state.ui.editingDefect = null;
+            state.ui.pendingVariant = null;
+            renderDetailedScreen();
+          });
+          card.appendChild(head);
+
+          if (state.ui.expandedDefect === def.id && !disabled) {
+            card.appendChild(buildDefectBody(def, entry, hasValue, available));
+          }
+
+          list.appendChild(card);
+        });
+      }
+
+      function buildDefectBody(def, entry, hasValue, available) {
+        var body = document.createElement("div");
+        body.className = "ddefect-body";
+
+        if (def.type === "qty") {
+          var showGrid = !hasValue || state.ui.editingDefect === def.id;
+          if (hasValue && !showGrid) {
+            body.appendChild(buildValueSummary("Seleccionado: " + entry.qty, def.id, "qty"));
+          } else {
+            var max = available + (hasValue ? Number(entry.qty) : 0);
+            var lbl = document.createElement("div");
+            lbl.className = "sub-label";
+            lbl.textContent = "Selecciona la cantidad (1 – " + max + ")";
+            body.appendChild(lbl);
+            var grid = document.createElement("div");
+            grid.className = "qty-grid";
+            for (var n = 1; n <= max; n += 1) {
+              grid.appendChild(makeQtyButton(n, function (val) {
+                state.currentAudit.defects[def.id] = { qty: val };
+                state.ui.expandedDefect = null;
+                state.ui.editingDefect = null;
+                saveShiftDraft();
+                renderDetailedScreen();
+              }));
+            }
+            body.appendChild(grid);
+          }
+          return body;
+        }
+
+        if (def.type === "group") {
+          var groups = (entry && entry.groups) ? entry.groups : [];
+          if (groups.length > 0) {
+            var glbl = document.createElement("div");
+            glbl.className = "sub-label";
+            glbl.textContent = "Grupos agregados";
+            body.appendChild(glbl);
+            groups.forEach(function (g, index) {
+              var item = document.createElement("div");
+              item.className = "group-item";
+              var text = document.createElement("div");
+              text.className = "group-item-text";
+              text.innerHTML = "<strong>" + g.variant + "</strong> = " + g.qty +
+                ' <span class="group-item-tag">' + (index === 0 ? "predominante" : "mezclado") + "</span>";
+              var rm = document.createElement("button");
+              rm.type = "button";
+              rm.className = "btn-mini danger";
+              rm.textContent = "Quitar";
+              rm.addEventListener("click", function () {
+                entry.groups.splice(index, 1);
+                if (entry.groups.length === 0) { delete state.currentAudit.defects[def.id]; }
+                state.ui.pendingVariant = null;
+                saveShiftDraft();
+                renderDetailedScreen();
+              });
+              item.appendChild(text);
+              item.appendChild(rm);
+              body.appendChild(item);
+            });
+          }
+
+          if (available > 0) {
+            if (!state.ui.pendingVariant) {
+              var vlbl = document.createElement("div");
+              vlbl.className = "sub-label";
+              vlbl.textContent = groups.length === 0 ? "Selecciona el grupo predominante" : "Agregar otro grupo (mezclado)";
+              body.appendChild(vlbl);
+              var vgrid = document.createElement("div");
+              vgrid.className = "variant-grid";
+              def.variants.forEach(function (variant) {
+                var vb = document.createElement("button");
+                vb.type = "button";
+                vb.className = "btn-variant";
+                vb.textContent = variant;
+                vb.addEventListener("click", function () {
+                  state.ui.pendingVariant = variant;
+                  renderDetailedScreen();
+                });
+                vgrid.appendChild(vb);
+              });
+              body.appendChild(vgrid);
+            } else {
+              var qlbl = document.createElement("div");
+              qlbl.className = "sub-label";
+              qlbl.textContent = "Cantidad para " + state.ui.pendingVariant + " (1 – " + available + ")";
+              body.appendChild(qlbl);
+              var qgrid = document.createElement("div");
+              qgrid.className = "qty-grid";
+              for (var k = 1; k <= available; k += 1) {
+                qgrid.appendChild(makeQtyButton(k, function (val) {
+                  if (!state.currentAudit.defects[def.id]) { state.currentAudit.defects[def.id] = { groups: [] }; }
+                  state.currentAudit.defects[def.id].groups.push({ variant: state.ui.pendingVariant, qty: val });
+                  state.ui.pendingVariant = null;
+                  saveShiftDraft();
+                  renderDetailedScreen();
+                }));
+              }
+              var cancelVar = document.createElement("button");
+              cancelVar.type = "button";
+              cancelVar.className = "btn-mini ghost";
+              cancelVar.textContent = "Cancelar grupo";
+              cancelVar.style.marginTop = "10px";
+              cancelVar.addEventListener("click", function () {
+                state.ui.pendingVariant = null;
+                renderDetailedScreen();
+              });
+              body.appendChild(qgrid);
+              body.appendChild(cancelVar);
+            }
+          } else {
+            var note = document.createElement("div");
+            note.className = "no-avail-note";
+            note.textContent = "No quedan papayas disponibles para nuevos grupos.";
+            body.appendChild(note);
+          }
+          return body;
+        }
+
+        if (def.type === "weight") {
+          var wlbl = document.createElement("div");
+          wlbl.className = "sub-label";
+          wlbl.textContent = "Mal Pesado (no consume papayas del Count)";
+          body.appendChild(wlbl);
+          var wgrid = document.createElement("div");
+          wgrid.className = "btn-grid btn-grid-2";
+          ["Peso ↑", "Peso ↓"].forEach(function (opt) {
+            var wb = document.createElement("button");
+            wb.type = "button";
+            wb.className = "btn-option" + (state.currentAudit.malPesado === opt ? " selected" : "");
+            wb.textContent = opt;
+            wb.addEventListener("click", function () {
+              state.currentAudit.malPesado = opt;
+              state.ui.expandedDefect = null;
+              saveShiftDraft();
+              renderDetailedScreen();
+            });
+            wgrid.appendChild(wb);
+          });
+          body.appendChild(wgrid);
+          if (hasValue) {
+            var summary = buildValueSummary("Seleccionado: " + state.currentAudit.malPesado, def.id, "weight");
+            body.appendChild(summary);
+          }
+          return body;
+        }
+
+        return body;
+      }
+
+      function buildValueSummary(text, defectId, type) {
+        var wrap = document.createElement("div");
+        wrap.className = "value-summary";
+        var txt = document.createElement("div");
+        txt.textContent = text;
+        var actions = document.createElement("div");
+        actions.className = "value-summary-actions";
+
+        if (type === "qty") {
+          var edit = document.createElement("button");
+          edit.type = "button";
+          edit.className = "btn-mini ghost";
+          edit.textContent = "Editar";
+          edit.addEventListener("click", function () {
+            state.ui.editingDefect = defectId;
+            renderDetailedScreen();
+          });
+          actions.appendChild(edit);
+        }
+
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "btn-mini danger";
+        del.textContent = "Borrar";
+        del.addEventListener("click", function () {
+          if (type === "weight") { state.currentAudit.malPesado = null; }
+          else { delete state.currentAudit.defects[defectId]; }
+          state.ui.editingDefect = null;
+          saveShiftDraft();
+          renderDetailedScreen();
+        });
+        actions.appendChild(del);
+
+        wrap.appendChild(txt);
+        wrap.appendChild(actions);
+        return wrap;
+      }
+
+      function buildDetailedSummary() {
+        var audit = state.currentAudit;
+        if (!audit) { return "Sin defectos"; }
+        var parts = [];
+        DETAILED_DEFECTS.forEach(function (def) {
+          var entry = audit.defects[def.id];
+          if (def.type === "qty" && entry && entry.qty) {
+            parts.push(def.label + " " + entry.qty);
+          }
+          if (def.type === "group" && entry && entry.groups && entry.groups.length) {
+            var gtxt = entry.groups.map(function (g, i) {
+              return g.variant + " " + g.qty + (i === 0 ? " (pred)" : " (mez)");
+            }).join(", ");
+            parts.push(def.label + ": " + gtxt);
+          }
+        });
+        if (audit.malPesado) { parts.push("Mal Pesado (" + audit.malPesado + ")"); }
+        return parts.length ? parts.join(" · ") : "Sin defectos";
+      }
+
+      function buildDetailedRows() {
+        var audit = state.currentAudit;
+        var rows = [];
+        DETAILED_DEFECTS.forEach(function (def) {
+          var entry = audit.defects[def.id];
+          if (def.type === "qty" && entry && entry.qty) {
+            rows.push({ defecto: def.label, variante: "", cantidad: entry.qty, malPesado: "" });
+          }
+          if (def.type === "group" && entry && entry.groups && entry.groups.length) {
+            entry.groups.forEach(function (g, i) {
+              rows.push({
+                defecto: def.label,
+                variante: g.variant + (i === 0 ? " (predominante)" : " (mezclado)"),
+                cantidad: g.qty,
+                malPesado: ""
+              });
+            });
+          }
+        });
+        if (audit.malPesado) {
+          rows.push({ defecto: "Mal Pesado", variante: audit.malPesado, cantidad: 0, malPesado: audit.malPesado });
+        }
+        return rows;
+      }
+
+      /* ---------- Selección de empacador (compartida) ---------- */
+
+      function goToPackerSelect(context) {
+        state.pendingContext = context;
         var activePackers = getActivePackers();
         if (activePackers.length === 0) {
           showToast("No hay empacadores activos en el turno.", "error");
-          cancelFlow();
+          if (context === "simple") { cancelFlow(); } else { showScreen("screenDetailed"); }
           return;
         }
-
-        if (dom.packerSelectSearchInput) {
-          dom.packerSelectSearchInput.value = state.packerSelectSearchQuery || "";
-        }
+        if (dom.packerSelectSearchInput) { dom.packerSelectSearchInput.value = state.packerSelectSearchQuery || ""; }
         setSearchModeRadios("packerSelectSearchMode", state.packerSelectSearchMode || "both");
 
-        dom.packerSelectSummary.textContent = "Registra al empacador responsable del defecto detectado.";
-        dom.packerSelectBreadcrumb.innerHTML = "Defecto: <span>" + buildFlowSummary() + "</span>";
-
+        var summaryText = context === "simple" ? buildSimpleSummary() : ("Count " + state.currentAudit.count + " · " + buildDetailedSummary());
+        dom.packerSelectSummary.textContent = "Registra al empacador responsable de la caja.";
+        dom.packerSelectBreadcrumb.innerHTML = "Resumen: <span>" + summaryText + "</span>";
         renderPackerSelectGrid(activePackers);
         showScreen("screenPackerSelect");
       }
@@ -1626,12 +1945,8 @@
         var list = activePackers || getActivePackers();
         var query = state.packerSelectSearchQuery;
         var mode = state.packerSelectSearchMode || "both";
-        var filtered = list.filter(function (packer) {
-          return packerMatchesSearch(packer, query, mode);
-        });
-
+        var filtered = list.filter(function (packer) { return packerMatchesSearch(packer, query, mode); });
         dom.packerSelectGrid.innerHTML = "";
-
         if (filtered.length === 0) {
           var empty = document.createElement("div");
           empty.className = "empty-state";
@@ -1640,24 +1955,19 @@
           dom.packerSelectGrid.appendChild(empty);
           return;
         }
-
         for (var i = 0; i < filtered.length; i += 1) {
           var packer = filtered[i];
           var button = document.createElement("button");
           button.type = "button";
           button.className = "btn-packer";
-
           var codeEl = document.createElement("span");
           codeEl.className = "btn-packer-code";
           codeEl.textContent = packer.code;
-
           var nameEl = document.createElement("span");
           nameEl.className = "btn-packer-name";
           nameEl.textContent = packer.name;
-
           button.appendChild(codeEl);
           button.appendChild(nameEl);
-
           var errorCount = state.errorCounts[packer.code] || 0;
           if (errorCount > 0) {
             var errorsEl = document.createElement("span");
@@ -1665,71 +1975,27 @@
             errorsEl.textContent = "Errores en turno: " + errorCount;
             button.appendChild(errorsEl);
           }
-
+          button.dataset.code = packer.code;
           button.addEventListener("click", function (event) {
             event.preventDefault();
-            event.stopPropagation();
-            var selectedCode = event.currentTarget.dataset.code;
-            registerInspection(selectedCode);
+            registerForPacker(event.currentTarget.dataset.code);
           });
-          button.dataset.code = packer.code;
           dom.packerSelectGrid.appendChild(button);
         }
       }
 
-      function buildRecordPayload(packerCode) {
-        var flow = state.currentFlow;
-        var packer = getPackerByCode(packerCode);
-        var summary = buildFlowSummary();
-
-        return {
-          action: "register_inspection",
-          recordId: "rec_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
-          timestamp: nowIso(),
-          operationalDay: state.operationalDay,
-          shiftStartedAt: state.shiftStartedAt,
-          supervisor: state.supervisor,
-          defectId: flow.defectId,
-          defectLabel: flow.defectLabel,
-          details: Object.assign({}, flow.details),
-          summary: summary,
-          packerCode: packerCode,
-          packerName: packer ? packer.name : "",
-          alertEmails: CONFIG.alertEmails
-        };
+      function registerForPacker(packerCode) {
+        if (state.pendingContext === "detailed") { registerDetailed(packerCode); }
+        else { registerSimple(packerCode); }
       }
 
-      function buildErrorLabel(record) {
-        var label = record.defectLabel;
-        if (record.details.peso) {
-          label += " (" + record.details.peso + ")";
-        }
-        if (record.details.calibrePredominante && record.details.calibrePredominante !== "Skip") {
-          label += " · Cal " + record.details.calibrePredominante;
-          if (record.details.calibreMezclado) {
-            label += "/" + record.details.calibreMezclado;
-          }
-        }
-        if (record.details.colorPredominante && record.details.colorPredominante !== "Skip") {
-          label += " · Col " + record.details.colorPredominante;
-          if (record.details.colorMezclado) {
-            label += "/" + record.details.colorMezclado;
-          }
-        }
-        return label;
-      }
+      /* ---------- Errores y alertas ---------- */
 
-      function incrementPackerErrors(packerCode, record) {
-        if (!state.errorCounts[packerCode]) {
-          state.errorCounts[packerCode] = 0;
-        }
-        if (!state.errorHistory[packerCode]) {
-          state.errorHistory[packerCode] = [];
-        }
-
+      function incrementPackerErrors(packerCode, errorLabel) {
+        if (!state.errorCounts[packerCode]) { state.errorCounts[packerCode] = 0; }
+        if (!state.errorHistory[packerCode]) { state.errorHistory[packerCode] = []; }
         state.errorCounts[packerCode] += 1;
-        state.errorHistory[packerCode].push(buildErrorLabel(record));
-
+        state.errorHistory[packerCode].push(errorLabel);
         if (state.errorCounts[packerCode] >= 3 && !state.alertSent[packerCode]) {
           state.alertSent[packerCode] = true;
           triggerThreeErrorAlert(packerCode);
@@ -1740,51 +2006,60 @@
         var packer = getPackerByCode(packerCode);
         var errors = (state.errorHistory[packerCode] || []).slice(0, 3);
         var message = "Empacador " + packerCode + (packer ? " (" + packer.name + ")" : "") +
-          " acumuló 3 errores en el turno.\n\n" +
-          "Supervisor: " + state.supervisor + "\n\n" +
-          "Errores:\n1. " + (errors[0] || "—") + "\n2. " + (errors[1] || "—") + "\n3. " + (errors[2] || "—");
-
+          " acumuló 3 auditorías con error.\n\n" +
+          "Supervisor: " + state.supervisor + "\n" +
+          "Modo: " + (state.detailedMode ? "Detallado" : "Simple") + "\n\n" +
+          "Registros:\n1. " + (errors[0] || "—") + "\n2. " + (errors[1] || "—") + "\n3. " + (errors[2] || "—");
         dom.alert3Text.textContent = message;
         dom.modalAlert3.classList.add("open");
 
         var alertPayload = {
           action: "send_alert",
-          alertId: "alert_" + Date.now() + "_" + packerCode,
+          alertId: uid("alert") + "_" + packerCode,
           timestamp: nowIso(),
           operationalDay: state.operationalDay,
           supervisor: state.supervisor,
+          mode: state.detailedMode ? "Detallado" : "Simple",
           packerCode: packerCode,
           packerName: packer ? packer.name : "",
           errors: errors,
           emails: CONFIG.alertEmails
         };
-
         sendToApi(alertPayload).catch(function () {
           state.pendingQueue.push(alertPayload);
           savePendingQueue();
         });
       }
 
-      function registerInspection(packerCode) {
-        if (state.isRegistering) {
-          return;
-        }
-        if (!state.currentFlow) {
-          return;
-        }
+      /* ---------- Registro simple ---------- */
 
+      function registerSimple(packerCode) {
+        if (state.isRegistering || !state.currentFlow) { return; }
         state.isRegistering = true;
+        lockPackerButtons();
 
-        var packerButtons = dom.packerSelectGrid.querySelectorAll("button");
-        for (var b = 0; b < packerButtons.length; b += 1) {
-          packerButtons[b].disabled = true;
-        }
+        var packer = getPackerByCode(packerCode);
+        var summary = buildSimpleSummary();
+        var detail = summary.replace(state.currentFlow.defectLabel, "").replace(/^ · /, "");
+        var record = {
+          action: "register_simple_inspection",
+          recordId: uid("rec"),
+          timestamp: nowIso(),
+          operationalDay: state.operationalDay,
+          shiftStartedAt: state.shiftStartedAt,
+          supervisor: state.supervisor,
+          defectId: state.currentFlow.defectId,
+          defectLabel: state.currentFlow.defectLabel,
+          detail: detail,
+          summary: summary,
+          packerCode: packerCode,
+          packerName: packer ? packer.name : "",
+          countsAsError: true,
+          emails: CONFIG.alertEmails
+        };
 
-        var record = buildRecordPayload(packerCode);
-        incrementPackerErrors(packerCode, record);
+        incrementPackerErrors(packerCode, summary);
         saveShiftDraft();
-
-        var flowToClear = state.currentFlow;
         state.currentFlow = null;
         state.flowStack = [];
 
@@ -1796,66 +2071,105 @@
           showToast("Registro en cola local · " + packerCode, "info");
         }).finally(function () {
           state.isRegistering = false;
-          if (flowToClear) {
-            showScreen("screenBoard");
-          }
+          showScreen("screenBoard");
         });
       }
+
+      /* ---------- Registro detallado ---------- */
+
+      function registerDetailed(packerCode) {
+        if (state.isRegistering || !state.currentAudit) { return; }
+        state.isRegistering = true;
+        lockPackerButtons();
+
+        var audit = state.currentAudit;
+        var packer = getPackerByCode(packerCode);
+        var assigned = auditAssigned();
+        var buenas = audit.count - assigned;
+        var rows = buildDetailedRows();
+        var summary = buildDetailedSummary();
+        var hasDefect = auditHasDefect();
+
+        var record = {
+          action: "register_detailed_inspection",
+          auditId: audit.auditId,
+          recordId: uid("rec"),
+          timestamp: nowIso(),
+          operationalDay: state.operationalDay,
+          shiftStartedAt: state.shiftStartedAt,
+          supervisor: state.supervisor,
+          packerCode: packerCode,
+          packerName: packer ? packer.name : "",
+          count: audit.count,
+          assigned: assigned,
+          buenas: buenas,
+          rows: rows,
+          summary: hasDefect ? summary : "Sin defectos",
+          countsAsError: hasDefect,
+          emails: CONFIG.alertEmails
+        };
+
+        if (hasDefect) {
+          incrementPackerErrors(packerCode, "Count " + audit.count + " · " + summary);
+        }
+        saveShiftDraft();
+
+        sendToApi(record).then(function () {
+          showToast(hasDefect ? ("Auditoría guardada · " + packerCode) : ("Caja sin defectos · " + packerCode), "success");
+        }).catch(function () {
+          state.pendingQueue.push(record);
+          savePendingQueue();
+          showToast("Auditoría en cola local · " + packerCode, "info");
+        }).finally(function () {
+          state.isRegistering = false;
+          startNewBox();
+        });
+      }
+
+      function lockPackerButtons() {
+        var buttons = dom.packerSelectGrid.querySelectorAll("button");
+        for (var b = 0; b < buttons.length; b += 1) { buttons[b].disabled = true; }
+      }
+
+      /* ---------- API (JSONP con token) ---------- */
 
       function isApiConfigured() {
         return Boolean(CONFIG.apiBaseUrl) && CONFIG.apiBaseUrl.indexOf("script.google.com") !== -1;
       }
 
-      /**
-       * JSONP: permite LEER respuestas de Apps Script desde cualquier origen
-       * (necesario para sincronizar empacadores entre PC/iPad).
-       */
       function apiRequest(payload) {
         return new Promise(function (resolve, reject) {
-          if (!isApiConfigured()) {
-            reject(new Error("API no configurada"));
-            return;
-          }
-          if (!navigator.onLine) {
-            reject(new Error("Sin conexión a internet"));
-            return;
-          }
-          if (window.location.protocol === "file:") {
-            reject(new Error("Abriste file://. Usa http://127.0.0.1:8080/ o la URL publicada"));
-            return;
-          }
+          if (!isApiConfigured()) { reject(new Error("API no configurada")); return; }
+          if (!navigator.onLine) { reject(new Error("Sin conexión a internet")); return; }
+          if (window.location.protocol === "file:") { reject(new Error("Abriste file://. Usa http://127.0.0.1:8080/ o la URL publicada")); return; }
+
+          var body = Object.assign({}, payload);
+          if (body.action !== "authenticate" && state.token) { body.token = state.token; }
 
           var cbName = "soazJsonp_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
           var script = document.createElement("script");
           var settled = false;
 
           var timer = window.setTimeout(function () {
-            if (settled) {
-              return;
-            }
-            settled = true;
-            cleanup();
+            if (settled) { return; }
+            settled = true; cleanup();
             reject(new Error("Timeout al contactar Google Sheets"));
           }, 20000);
 
           function cleanup() {
             window.clearTimeout(timer);
-            try {
-              delete window[cbName];
-            } catch (ignoreDelete) {
-              window[cbName] = undefined;
-            }
-            if (script.parentNode) {
-              script.parentNode.removeChild(script);
-            }
+            try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+            if (script.parentNode) { script.parentNode.removeChild(script); }
           }
 
           window[cbName] = function (data) {
-            if (settled) {
+            if (settled) { return; }
+            settled = true; cleanup();
+            if (data && data.ok === false && data.error === "Sesión inválida o expirada") {
+              handleSessionExpired();
+              reject(new Error(data.error));
               return;
             }
-            settled = true;
-            cleanup();
             if (!data || data.ok === false) {
               reject(new Error((data && data.error) || "Error en Google Sheets"));
               return;
@@ -1864,30 +2178,31 @@
           };
 
           script.onerror = function () {
-            if (settled) {
-              return;
-            }
-            settled = true;
-            cleanup();
+            if (settled) { return; }
+            settled = true; cleanup();
             reject(new Error("No se pudo conectar con Google Sheets"));
           };
 
           script.src = CONFIG.apiBaseUrl +
-            "?payload=" + encodeURIComponent(JSON.stringify(payload)) +
+            "?payload=" + encodeURIComponent(JSON.stringify(body)) +
             "&callback=" + encodeURIComponent(cbName) +
             "&_ts=" + Date.now();
           document.body.appendChild(script);
         });
       }
 
-      function sendToApi(payload) {
-        return apiRequest(payload);
+      function sendToApi(payload) { return apiRequest(payload); }
+
+      function handleSessionExpired() {
+        showToast("Sesión inválida o expirada. Inicia sesión de nuevo.", "error");
+        resetShiftState();
+        if (dom.password) { dom.password.value = ""; }
+        updateHeader();
+        showScreen("screenLogin");
       }
 
       function buildGasGetUrl(payload) {
-        return CONFIG.apiBaseUrl +
-          "?payload=" + encodeURIComponent(JSON.stringify(payload)) +
-          "&_ts=" + Date.now();
+        return CONFIG.apiBaseUrl + "?payload=" + encodeURIComponent(JSON.stringify(payload)) + "&_ts=" + Date.now();
       }
 
       function handleTestSheet() {
@@ -1895,52 +2210,22 @@
           showToast("Primero abre la app con abrir-app.bat (http://127.0.0.1:8080/)", "error");
           return;
         }
-
-        var testPayload = {
-          action: "register_inspection",
-          recordId: "webtest_" + Date.now(),
-          timestamp: nowIso(),
-          operationalDay: getOperationalDay(new Date()),
-          supervisor: "Prueba Web",
-          defectId: "mal_pesado",
-          defectLabel: "Mal Pesado",
-          details: { peso: "Peso ↑" },
-          summary: "Prueba desde la página web",
-          packerCode: "E001",
-          packerName: "Ana Ruiz",
-          alertEmails: CONFIG.alertEmails
-        };
-
-        var url = buildGasGetUrl(testPayload);
+        var payload = { action: "list_packers", token: state.token || "" };
+        var url = buildGasGetUrl(payload);
         window.open(url, "_blank");
-        showToast("Se abrió la prueba. Si ves {\"ok\":true}, revisa Inspecciones en el Sheet.", "info");
-
-        sendToApi(testPayload).then(function () {
-          showToast("Beacon enviado. Revisa la pestaña Inspecciones.", "success");
-        }).catch(function (error) {
-          showToast(error.message || "Falló la prueba web", "error");
-        });
+        showToast("Se abrió la prueba en otra pestaña. Si ves {\"ok\":true}, la API responde.", "info");
       }
 
-      function flushPendingQueue() {
-        if (state.isSyncing || state.pendingQueue.length === 0 || !isApiConfigured()) {
-          updateSyncBanner();
-          return;
-        }
+      /* ---------- Cola pendiente ---------- */
 
-        if (!navigator.onLine) {
-          setConnectionStatus("offline");
-          updateSyncBanner();
-          showToast("Sin internet. No se puede sincronizar ahora.", "error");
-          return;
-        }
+      function flushPendingQueue() {
+        if (state.isSyncing || state.pendingQueue.length === 0 || !isApiConfigured()) { updateSyncBanner(); return; }
+        if (!navigator.onLine) { setConnectionStatus("offline"); updateSyncBanner(); showToast("Sin internet. No se puede sincronizar.", "error"); return; }
 
         state.isSyncing = true;
         setConnectionStatus("syncing");
-
         var queueCopy = state.pendingQueue.slice();
-        var index = 0;
-        var sentCount = 0;
+        var index = 0, sentCount = 0;
 
         function processNext() {
           if (index >= queueCopy.length) {
@@ -1948,16 +2233,11 @@
             savePendingQueue();
             state.isSyncing = false;
             setConnectionStatus("online");
-            if (sentCount > 0) {
-              showToast("Cola enviada a Google Sheets (" + sentCount + ").", "success");
-            }
+            if (sentCount > 0) { showToast("Cola enviada a Google Sheets (" + sentCount + ").", "success"); }
             return;
           }
-
           sendToApi(queueCopy[index]).then(function () {
-            sentCount += 1;
-            index += 1;
-            processNext();
+            sentCount += 1; index += 1; processNext();
           }).catch(function (error) {
             state.pendingQueue = queueCopy.slice(index);
             savePendingQueue();
@@ -1966,129 +2246,69 @@
             showToast("Sincronización detenida: " + (error && error.message ? error.message : "error de red"), "error");
           });
         }
-
         processNext();
       }
 
       function clearPendingQueue() {
-        if (state.pendingQueue.length === 0) {
-          return;
-        }
-        var confirmed = window.confirm("¿Vaciar " + state.pendingQueue.length + " registros pendientes? No se enviarán a Google Sheets.");
-        if (!confirmed) {
-          return;
-        }
+        if (state.pendingQueue.length === 0) { return; }
+        if (!window.confirm("¿Vaciar " + state.pendingQueue.length + " registros pendientes? No se enviarán a Google Sheets.")) { return; }
         state.pendingQueue = [];
         savePendingQueue();
         showToast("Cola local vaciada.", "info");
       }
 
-      function cancelFlow() {
-        state.currentFlow = null;
-        state.flowStack = [];
-        showScreen("screenBoard");
-      }
+      /* ---------- Login / turno ---------- */
 
-      function undoLastFlowDetail() {
-        var flow = state.currentFlow;
-        if (!flow) {
-          return false;
-        }
-
-        if (flow.defectId === "mal_pesado" && flow.details.peso) {
-          delete flow.details.peso;
-          return true;
-        }
-
-        if (flow.defectId === "calibre_revuelto") {
-          if (flow.details.calibreMezclado) {
-            delete flow.details.calibreMezclado;
-            return true;
-          }
-          if (flow.details.calibrePredominante) {
-            delete flow.details.calibrePredominante;
-            return true;
-          }
-        }
-
-        if (flow.defectId === "colores_mixtos") {
-          if (flow.details.colorMezclado) {
-            delete flow.details.colorMezclado;
-            return true;
-          }
-          if (flow.details.colorPredominante) {
-            delete flow.details.colorPredominante;
-            return true;
-          }
-        }
-
-        return false;
-      }
-
-      function flowBackFromOptions() {
-        if (!state.currentFlow) {
-          showScreen("screenBoard");
-          return;
-        }
-        if (undoLastFlowDetail()) {
-          advanceFlow();
-          return;
-        }
-        cancelFlow();
-      }
-
-      function flowBackFromPacker() {
-        if (!state.currentFlow) {
-          showScreen("screenBoard");
-          return;
-        }
-        if (undoLastFlowDetail()) {
-          advanceFlow();
-          return;
-        }
-        cancelFlow();
-      }
-
-      function handleSupervisorSubmit(event) {
+      function handleLoginSubmit(event) {
         event.preventDefault();
-        var nameInput = dom.supervisorName;
-        var name = nameInput.value.trim();
-        if (!name) {
-          showToast("El nombre del supervisor es obligatorio.", "error");
-          return;
-        }
+        var name = dom.supervisorName.value.trim();
+        var password = dom.password.value;
+        if (!name) { showToast("El nombre del supervisor es obligatorio.", "error"); return; }
+        if (!password) { showToast("La contraseña es obligatoria.", "error"); return; }
+        if (window.location.protocol === "file:") { showToast("Abre la app con abrir-app.bat (http://127.0.0.1:8080/)", "error"); return; }
 
-        state.supervisor = name;
-        state.shiftStartedAt = nowIso();
-        state.operationalDay = getOperationalDay(new Date());
-        state.errorCounts = {};
-        state.errorHistory = {};
-        state.alertSent = {};
-        state.isRegistering = false;
-        state.currentFlow = null;
-        state.flowStack = [];
-        state.shiftMarkerSent = false;
-        state.packerSearchQuery = "";
-        if (dom.packerSearchInput) {
-          dom.packerSearchInput.value = "";
-        }
-        updateHeader();
-        showScreen("screenPackers");
-        renderPackerManageList();
-        refreshPackersFromCloud(true);
+        dom.btnLogin.disabled = true;
+        dom.btnLogin.textContent = "Verificando...";
+
+        apiRequest({ action: "authenticate", supervisor: name, password: password }).then(function (data) {
+          state.token = data.token;
+          state.supervisor = data.supervisor || name;
+          state.detailedMode = dom.detailedModeToggle.checked;
+          state.shiftStartedAt = nowIso();
+          state.operationalDay = getOperationalDay(new Date());
+          state.errorCounts = {};
+          state.errorHistory = {};
+          state.alertSent = {};
+          state.currentFlow = null;
+          state.currentAudit = null;
+          state.shiftMarkerSent = false;
+          state.packerSearchQuery = "";
+          if (dom.packerSearchInput) { dom.packerSearchInput.value = ""; }
+          localStorage.setItem(CONFIG.storageKeys.token, state.token);
+          dom.password.value = "";
+          saveShiftDraft();
+          updateHeader();
+          showScreen("screenPackers");
+          renderPackerManageList();
+          refreshPackersFromCloud(true);
+          showToast("Sesión iniciada. Modo " + (state.detailedMode ? "detallado" : "simple") + ".", "success");
+        }).catch(function (error) {
+          showToast(error.message || "No se pudo iniciar sesión", "error");
+        }).finally(function () {
+          dom.btnLogin.disabled = false;
+          dom.btnLogin.textContent = "Iniciar Turno";
+        });
       }
 
       function handleConfirmPackers() {
         dedupeActivePackerCodes();
-        if (getActivePackers().length === 0) {
-          showToast("Selecciona al menos un empacador activo.", "error");
-          return;
-        }
-
+        if (getActivePackers().length === 0) { showToast("Selecciona al menos un empacador activo.", "error"); return; }
         saveShiftDraft();
         updateHeader();
-        showScreen("screenBoard");
-        showToast("Tablero habilitado. Turno iniciado.", "success");
+
+        if (state.detailedMode) { startNewBox(); }
+        else { renderDefectButtons(); showScreen("screenBoard"); }
+        showToast("Turno iniciado. Modo " + (state.detailedMode ? "detallado" : "simple") + ".", "success");
 
         if (!state.shiftMarkerSent) {
           apiRequest({
@@ -2097,8 +2317,8 @@
             operationalDay: state.operationalDay,
             shiftStartedAt: state.shiftStartedAt,
             supervisor: state.supervisor,
-            activePackerCodes: state.activePackerCodes.slice(),
-            activePackerCount: state.activePackerCodes.length
+            mode: state.detailedMode ? "detailed" : "simple",
+            activePackerCount: getActivePackers().length
           }).then(function () {
             state.shiftMarkerSent = true;
             saveShiftDraft();
@@ -2110,101 +2330,71 @@
 
       function toggleAddPackerForm(show) {
         dom.addPackerForm.hidden = !show;
-        if (show) {
-          dom.newPackerCode.focus();
-        } else {
-          dom.newPackerCode.value = "";
-          dom.newPackerName.value = "";
-        }
+        if (show) { dom.newPackerCode.focus(); }
+        else { dom.newPackerCode.value = ""; dom.newPackerName.value = ""; }
       }
 
       function handleSaveNewPacker() {
         var code = dom.newPackerCode.value.trim().toUpperCase();
         var name = dom.newPackerName.value.trim();
-
-        if (!code || !name) {
-          showToast("Código e identificación son obligatorios.", "error");
-          return;
-        }
-
-        if (getPackerByCode(code)) {
-          showToast("Ya existe un empacador con ese código.", "error");
-          return;
-        }
-
-        apiRequest({
-          action: "upsert_packer",
-          packer: { code: code, name: name, active: true }
-        }).then(function (data) {
+        if (!code || !name) { showToast("Código e identificación son obligatorios.", "error"); return; }
+        if (getPackerByCode(code)) { showToast("Ya existe un empacador con ese código.", "error"); return; }
+        apiRequest({ action: "upsert_packer", packer: { code: code, name: name, active: true } }).then(function (data) {
           applyPackerCatalog(data.packers || []);
-          if (state.activePackerCodes.indexOf(code) === -1) {
-            state.activePackerCodes.push(code);
-          }
+          if (state.activePackerCodes.indexOf(code) === -1) { state.activePackerCodes.push(code); }
           saveShiftDraft();
           renderPackerManageList();
           toggleAddPackerForm(false);
           showToast("Empacador " + code + " guardado en la base compartida.", "success");
-        }).catch(function (error) {
-          showToast(error.message || "No se pudo guardar en Sheets", "error");
-        });
+        }).catch(function (error) { showToast(error.message || "No se pudo guardar en Sheets", "error"); });
       }
 
-      function handleCloseShift() {
-        dom.modalCloseShift.classList.add("open");
-      }
+      function handleCloseShift() { dom.modalCloseShift.classList.add("open"); }
 
       function confirmCloseShift() {
         dom.modalCloseShift.classList.remove("open");
+        var closePayload = {
+          action: "close_shift",
+          timestamp: nowIso(),
+          operationalDay: state.operationalDay,
+          supervisor: state.supervisor,
+          mode: state.detailedMode ? "detailed" : "simple"
+        };
+        sendToApi(closePayload).catch(function () {});
         resetShiftState();
         dom.supervisorName.value = "";
+        if (dom.password) { dom.password.value = ""; }
         updateHeader();
-        showScreen("screenSupervisor");
+        showScreen("screenLogin");
         showToast("Turno cerrado correctamente.", "info");
       }
 
+      /* ---------- PWA / entorno ---------- */
+
       function registerServiceWorker() {
-        if (window.location.protocol === "file:") {
-          return;
-        }
+        if (window.location.protocol === "file:") { return; }
         if ("serviceWorker" in navigator) {
-          navigator.serviceWorker.register("sw.js").catch(function () {
-            // Silencioso: no es crítico para el registro en Sheets
-          });
+          navigator.serviceWorker.register("sw.js").catch(function () {});
         }
       }
 
       function warnIfFileProtocol() {
         if (window.location.protocol !== "file:") {
-          if (dom.fileProtocolHint) {
-            dom.fileProtocolHint.style.display = "none";
-          }
+          if (dom.fileProtocolHint) { dom.fileProtocolHint.style.display = "none"; }
           return;
         }
-        showToast("Estás en file://. Cierra esto y abre con abrir-app.bat → http://127.0.0.1:8080/", "error");
-        if (dom.fileProtocolHint) {
-          dom.fileProtocolHint.style.display = "block";
-        }
-        if (dom.syncBanner && dom.syncBannerText) {
-          dom.syncBanner.classList.add("visible");
-          dom.syncBannerText.textContent = "MODO INCORRECTO: abriste index.html directo. Usa abrir-app.bat y entra a http://127.0.0.1:8080/";
-          if (dom.btnRetrySync) {
-            dom.btnRetrySync.style.display = "none";
-          }
-          if (dom.btnClearQueue) {
-            dom.btnClearQueue.style.display = "none";
-          }
-        }
+        showToast("Estás en file://. Abre con abrir-app.bat → http://127.0.0.1:8080/", "error");
+        if (dom.fileProtocolHint) { dom.fileProtocolHint.style.display = "block"; }
       }
 
+      /* ---------- Eventos ---------- */
+
       function bindEvents() {
-        dom.supervisorForm.addEventListener("submit", handleSupervisorSubmit);
+        dom.loginForm.addEventListener("submit", handleLoginSubmit);
         dom.btnConfirmPackers.addEventListener("click", handleConfirmPackers);
-        dom.btnToggleAddPacker.addEventListener("click", function () {
-          toggleAddPackerForm(dom.addPackerForm.hidden);
-        });
-        dom.btnSyncPackers.addEventListener("click", function () {
-          refreshPackersFromCloud(true);
-        });
+        dom.btnToggleAddPacker.addEventListener("click", function () { toggleAddPackerForm(dom.addPackerForm.hidden); });
+        dom.btnSyncPackers.addEventListener("click", function () { refreshPackersFromCloud(true); });
+
         if (dom.packerSearchInput) {
           dom.packerSearchInput.addEventListener("input", function (event) {
             state.packerSearchQuery = event.target.value;
@@ -2230,25 +2420,54 @@
             renderPackerSelectGrid();
           });
         }
-        dom.btnCancelAddPacker.addEventListener("click", function () {
-          toggleAddPackerForm(false);
-        });
+
+        dom.btnCancelAddPacker.addEventListener("click", function () { toggleAddPackerForm(false); });
         dom.btnSaveNewPacker.addEventListener("click", handleSaveNewPacker);
-        dom.btnCloseShift.addEventListener("click", handleCloseShift);
-        dom.btnCancelCloseShift.addEventListener("click", function () {
-          dom.modalCloseShift.classList.remove("open");
-        });
+
+        dom.btnCloseShiftSimple.addEventListener("click", handleCloseShift);
+        dom.btnCloseShiftDetailed.addEventListener("click", handleCloseShift);
+        dom.btnCancelCloseShift.addEventListener("click", function () { dom.modalCloseShift.classList.remove("open"); });
         dom.btnConfirmCloseShift.addEventListener("click", confirmCloseShift);
-        dom.btnDismissAlert3.addEventListener("click", function () {
-          dom.modalAlert3.classList.remove("open");
-        });
+
+        dom.btnDismissAlert3.addEventListener("click", function () { dom.modalAlert3.classList.remove("open"); });
+
         dom.btnFlowCancel.addEventListener("click", cancelFlow);
-        dom.btnPackerCancel.addEventListener("click", cancelFlow);
-        dom.btnFlowBack.addEventListener("click", flowBackFromOptions);
-        dom.btnPackerBack.addEventListener("click", flowBackFromPacker);
-        dom.btnRetrySync.addEventListener("click", function () {
-          flushPendingQueue();
+        dom.btnFlowBack.addEventListener("click", flowBack);
+
+        dom.btnPackerCancel.addEventListener("click", function () {
+          if (state.pendingContext === "simple") { cancelFlow(); }
+          else { showScreen("screenDetailed"); }
         });
+        dom.btnPackerBack.addEventListener("click", function () {
+          if (state.pendingContext === "simple") { flowBack(); }
+          else { showScreen("screenDetailed"); }
+        });
+
+        dom.btnSubmitAudit.addEventListener("click", handleSubmitAudit);
+        dom.btnChangeCount.addEventListener("click", handleChangeCount);
+        dom.btnClearSelections.addEventListener("click", function () { dom.modalClearSel.classList.add("open"); });
+        dom.btnCancelClearSel.addEventListener("click", function () { dom.modalClearSel.classList.remove("open"); });
+        dom.btnConfirmClearSel.addEventListener("click", function () {
+          dom.modalClearSel.classList.remove("open");
+          if (state.currentAudit) {
+            state.currentAudit.defects = {};
+            state.currentAudit.malPesado = null;
+          }
+          state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
+          saveShiftDraft();
+          renderDetailedScreen();
+          showToast("Selecciones borradas. Count conservado.", "info");
+        });
+        dom.btnCancelChangeCount.addEventListener("click", function () { dom.modalChangeCount.classList.remove("open"); });
+        dom.btnConfirmChangeCount.addEventListener("click", function () {
+          dom.modalChangeCount.classList.remove("open");
+          if (state.currentAudit) { state.currentAudit.defects = {}; state.currentAudit.malPesado = null; }
+          state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
+          renderCountGrid();
+          showScreen("screenCount");
+        });
+
+        dom.btnRetrySync.addEventListener("click", flushPendingQueue);
         dom.btnClearQueue.addEventListener("click", clearPendingQueue);
         dom.btnTestSheet.addEventListener("click", handleTestSheet);
 
@@ -2256,17 +2475,37 @@
           setConnectionStatus(isApiConfigured() ? "online" : "offline");
           flushPendingQueue();
         });
+        window.addEventListener("offline", function () { setConnectionStatus("offline"); });
+      }
 
-        window.addEventListener("offline", function () {
-          setConnectionStatus("offline");
-        });
+      function handleSubmitAudit() {
+        if (!state.currentAudit || state.currentAudit.count == null) {
+          showToast("Selecciona primero el Count.", "error");
+          return;
+        }
+        if (auditAssigned() > state.currentAudit.count) {
+          showToast("Las cantidades exceden el Count.", "error");
+          return;
+        }
+        dom.btnSubmitAudit.disabled = true;
+        window.setTimeout(function () { dom.btnSubmitAudit.disabled = false; }, 800);
+        goToPackerSelect("detailed");
+      }
+
+      function handleChangeCount() {
+        if (auditHasDefect()) { dom.modalChangeCount.classList.add("open"); }
+        else { renderCountGrid(); showScreen("screenCount"); }
       }
 
       function initDomRefs() {
-        dom.supervisorForm = byId("supervisorForm");
+        dom.loginForm = byId("loginForm");
         dom.supervisorName = byId("supervisorName");
+        dom.password = byId("password");
+        dom.detailedModeToggle = byId("detailedModeToggle");
+        dom.btnLogin = byId("btnLogin");
         dom.supervisorDisplay = byId("supervisorDisplay");
         dom.operationalDayDisplay = byId("operationalDayDisplay");
+        dom.modeTag = byId("modeTag");
         dom.connectionStatus = byId("connectionStatus");
         dom.syncBanner = byId("syncBanner");
         dom.syncBannerText = byId("syncBannerText");
@@ -2288,7 +2527,8 @@
         dom.btnCancelAddPacker = byId("btnCancelAddPacker");
         dom.btnConfirmPackers = byId("btnConfirmPackers");
         dom.defectButtons = byId("defectButtons");
-        dom.btnCloseShift = byId("btnCloseShift");
+        dom.btnCloseShiftSimple = byId("btnCloseShiftSimple");
+        dom.btnCloseShiftDetailed = byId("btnCloseShiftDetailed");
         dom.flowStepLabel = byId("flowStepLabel");
         dom.flowTitle = byId("flowTitle");
         dom.flowDescription = byId("flowDescription");
@@ -2296,6 +2536,13 @@
         dom.flowOptions = byId("flowOptions");
         dom.btnFlowBack = byId("btnFlowBack");
         dom.btnFlowCancel = byId("btnFlowCancel");
+        dom.countGrid = byId("countGrid");
+        dom.detailedStepLabel = byId("detailedStepLabel");
+        dom.totalsBar = byId("totalsBar");
+        dom.detailedList = byId("detailedList");
+        dom.btnSubmitAudit = byId("btnSubmitAudit");
+        dom.btnChangeCount = byId("btnChangeCount");
+        dom.btnClearSelections = byId("btnClearSelections");
         dom.packerSelectSummary = byId("packerSelectSummary");
         dom.packerSelectBreadcrumb = byId("packerSelectBreadcrumb");
         dom.packerSelectGrid = byId("packerSelectGrid");
@@ -2303,10 +2550,16 @@
         dom.btnPackerCancel = byId("btnPackerCancel");
         dom.toastContainer = byId("toastContainer");
         dom.modalCloseShift = byId("modalCloseShift");
-        dom.modalAlert3 = byId("modalAlert3");
-        dom.alert3Text = byId("alert3Text");
         dom.btnCancelCloseShift = byId("btnCancelCloseShift");
         dom.btnConfirmCloseShift = byId("btnConfirmCloseShift");
+        dom.modalClearSel = byId("modalClearSel");
+        dom.btnCancelClearSel = byId("btnCancelClearSel");
+        dom.btnConfirmClearSel = byId("btnConfirmClearSel");
+        dom.modalChangeCount = byId("modalChangeCount");
+        dom.btnCancelChangeCount = byId("btnCancelChangeCount");
+        dom.btnConfirmChangeCount = byId("btnConfirmChangeCount");
+        dom.modalAlert3 = byId("modalAlert3");
+        dom.alert3Text = byId("alert3Text");
         dom.btnDismissAlert3 = byId("btnDismissAlert3");
       }
 
@@ -2316,7 +2569,7 @@
         registerServiceWorker();
         warnIfFileProtocol();
 
-        state.packerCatalog = loadJson(CONFIG.storageKeys.packers, DEFAULT_PACKERS);
+        state.packerCatalog = loadJson(CONFIG.storageKeys.packers, []);
         state.pendingQueue = loadJson(CONFIG.storageKeys.pendingQueue, []);
         state.packerSearchMode = localStorage.getItem(CONFIG.storageKeys.searchMode) || "both";
         state.packerSelectSearchMode = state.packerSearchMode;
@@ -2324,6 +2577,7 @@
         setSearchModeRadios("packerSelectSearchMode", state.packerSelectSearchMode);
 
         renderDefectButtons();
+        renderCountGrid();
         updateSyncBanner();
 
         if (loadShiftDraft()) {
@@ -2331,13 +2585,22 @@
           renderPackerManageList();
           refreshPackersFromCloud(false).catch(function () {});
           if (getActivePackers().length > 0) {
-            showScreen("screenBoard");
+            if (state.detailedMode) {
+              if (state.currentAudit && state.currentAudit.count != null) {
+                renderDetailedScreen();
+                showScreen("screenDetailed");
+              } else {
+                startNewBox();
+              }
+            } else {
+              showScreen("screenBoard");
+            }
           } else {
             showScreen("screenPackers");
           }
         } else {
           updateHeader();
-          showScreen("screenSupervisor");
+          showScreen("screenLogin");
         }
 
         if (isApiConfigured() && navigator.onLine) {
