@@ -2106,10 +2106,37 @@
           showToast("Primero abre la app con abrir-app.bat (http://127.0.0.1:8080/)", "error");
           return;
         }
-        var payload = { action: "list_packers", token: state.token || "" };
-        var url = buildGasGetUrl(payload);
-        window.open(url, "_blank");
-        showToast("Se abrió la prueba en otra pestaña. Si ves {\"ok\":true}, la API responde.", "info");
+        dom.btnTestSheet.disabled = true;
+        dom.btnTestSheet.textContent = "Probando conexión...";
+        // La raíz del API es pública: responde ok:true sin necesitar token.
+        var script = document.createElement("script");
+        var cbName = "soazTest_" + Date.now();
+        var timer = window.setTimeout(function () {
+          finish(false, "Timeout: Google Sheets no respondió.");
+        }, 15000);
+
+        function finish(ok, message) {
+          window.clearTimeout(timer);
+          try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+          if (script.parentNode) { script.parentNode.removeChild(script); }
+          dom.btnTestSheet.disabled = false;
+          dom.btnTestSheet.textContent = "Probar conexión con Google Sheets";
+          setConnectionStatus(ok ? "online" : "offline");
+          showToast(message, ok ? "success" : "error");
+        }
+
+        window[cbName] = function (data) {
+          if (data && data.ok) {
+            finish(true, "Conexión correcta con Google Sheets. API activa.");
+          } else {
+            finish(false, "El API respondió con error: " + ((data && data.error) || "desconocido"));
+          }
+        };
+        script.onerror = function () {
+          finish(false, "No se pudo conectar con Google Sheets. Revisa tu internet.");
+        };
+        script.src = CONFIG.apiBaseUrl + "?callback=" + cbName + "&_ts=" + Date.now();
+        document.body.appendChild(script);
       }
 
       /* ---------- Cola pendiente ---------- */
