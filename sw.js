@@ -1,4 +1,4 @@
-var CACHE_NAME = "soaz-inspeccion-v13";
+var CACHE_NAME = "soaz-inspeccion-v14";
 var ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", function (event) {
