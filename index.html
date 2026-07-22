@@ -600,6 +600,74 @@
     .btn-clear { color: #fca5a5; border-color: rgba(248,113,113,0.4); }
 
     .footer-bar { margin-top: auto; padding-top: 16px; display: flex; justify-content: flex-end; }
+
+    /* ---- Menú tuerca (reporte) ---- */
+    .gear-fab {
+      position: fixed;
+      left: calc(14px + env(safe-area-inset-left, 0px));
+      bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      z-index: 2500;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--border-strong);
+      background: rgba(17, 24, 39, 0.92);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      padding: 0;
+    }
+    .gear-fab.visible { display: inline-flex; }
+    .gear-fab:hover { border-color: var(--accent); }
+    .gear-fab svg { width: 22px; height: 22px; display: block; }
+    .gear-menu {
+      position: fixed;
+      left: calc(14px + env(safe-area-inset-left, 0px));
+      bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+      z-index: 2501;
+      min-width: 240px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+      display: none;
+      overflow: hidden;
+    }
+    .gear-menu.open { display: block; }
+    .gear-menu button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      min-height: 48px;
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    .gear-menu button:last-child { border-bottom: none; }
+    .gear-menu button:hover { background: var(--accent-soft); color: var(--accent-hover); }
+
+    .email-list {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0 16px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .email-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.92rem;
+    }
     .btn-close-shift {
       min-height: 40px;
       padding: 8px 14px;
@@ -853,9 +921,6 @@
           <p class="panel-desc">Selecciona la cantidad total de papayas en la caja auditada.</p>
         </div>
         <div class="count-grid" id="countGrid"></div>
-        <div class="toolbar-row" style="margin-top:16px;">
-          <button class="btn btn-secondary btn-block" type="button" id="btnSendReport">Enviar reporte</button>
-        </div>
         <div class="footer-bar">
           <button class="btn-close-shift" type="button" id="btnCloseShiftDetailed">Cerrar Turno</button>
         </div>
@@ -910,6 +975,20 @@
     </main>
   </div>
 
+  <button type="button" class="gear-fab" id="btnGearMenu" aria-label="Menú de reporte" title="Menú de reporte">
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <!-- Tuerca outline doble (8 dientes), estilo del ícono proporcionado -->
+      <path d="M27.2 6.4h9.6l1.6 5.2 4.9-2.2 6.8 6.8-2.2 4.9 5.2 1.6v9.6l-5.2 1.6 2.2 4.9-6.8 6.8-4.9-2.2-1.6 5.2h-9.6l-1.6-5.2-4.9 2.2-6.8-6.8 2.2-4.9-5.2-1.6v-9.6l5.2-1.6-2.2-4.9 6.8-6.8 4.9 2.2z" stroke="#e8edf5" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M28.4 11.2h7.2l1.1 3.6 3.4-1.5 4.2 4.2-1.5 3.4 3.6 1.1v7.2l-3.6 1.1 1.5 3.4-4.2 4.2-3.4-1.5-1.1 3.6h-7.2l-1.1-3.6-3.4 1.5-4.2-4.2 1.5-3.4-3.6-1.1v-7.2l3.6-1.1-1.5-3.4 4.2-4.2 3.4 1.5z" stroke="#e8edf5" stroke-width="1.7" stroke-linejoin="round"/>
+      <circle cx="32" cy="32" r="10.5" stroke="#e8edf5" stroke-width="2"/>
+      <circle cx="32" cy="32" r="6.2" stroke="#e8edf5" stroke-width="1.8"/>
+    </svg>
+  </button>
+  <div class="gear-menu" id="gearMenu" role="menu">
+    <button type="button" id="menuSendReport" role="menuitem">Enviar reporte</button>
+    <button type="button" id="menuManageEmails" role="menuitem">Agregar correos (reporte y alertas)</button>
+  </div>
+
   <div class="toast-container" id="toastContainer"></div>
 
   <div class="modal-overlay" id="modalCloseShift">
@@ -953,13 +1032,43 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modalEmailsPassword">
+    <div class="modal-card">
+      <h2 class="modal-title">Editar correos</h2>
+      <p class="modal-text" style="margin-bottom:10px;">Ingresa la contraseña para agregar o quitar correos.</p>
+      <div class="field-group">
+        <label class="field-label" for="emailsEditPassword">Contraseña</label>
+        <input class="field-input" id="emailsEditPassword" type="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCancelEmailsPassword">Cancelar</button>
+        <button class="btn btn-primary" type="button" id="btnConfirmEmailsPassword">Continuar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalReportEmails">
+    <div class="modal-card">
+      <h2 class="modal-title">Correos del reporte y alertas</h2>
+      <p class="modal-text" style="margin-bottom:10px;">Estos correos reciben el reporte (manual y cada 2 horas) y las alertas de 3 errores por empacador.</p>
+      <div class="email-list" id="reportEmailList"></div>
+      <div class="field-group">
+        <label class="field-label" for="newReportEmail">Agregar correo</label>
+        <input class="field-input" id="newReportEmail" type="email" placeholder="correo@ejemplo.com" autocomplete="email">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCloseReportEmails">Cerrar</button>
+        <button class="btn btn-primary" type="button" id="btnAddReportEmail">Agregar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbzIdbMRMBfoNNOlXmTzES-1CT0pXm-3KwP_5XO2y_QLWqdmVGlDm1c8RdyyOhHG8JNW/exec",
-        alertEmails: ["antoniozm007@gmail.com"],
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbwX_fPw9O9RLRdpKug9Is1-ENxKTBtbMxJ26JScHhP59W7VaswaTXhtgmRMgN659SG3/exec",
         reportEmails: ["antoniozm007@gmail.com"],
         operationalDayStartHour: 16,
         storageKeys: {
@@ -967,7 +1076,8 @@
           pendingQueue: "soaz_pending_records_v2",
           shiftDraft: "soaz_shift_draft_v2",
           searchMode: "soaz_packer_search_mode_v2",
-          token: "soaz_session_token_v2"
+          token: "soaz_session_token_v2",
+          reportEmails: "soaz_report_emails_v1"
         }
       };
 
@@ -1017,6 +1127,7 @@
         isSyncing: false,
         isRegistering: false,
         isSendingReport: false,
+        emailsEditPassword: "",
         packerSearchQuery: "",
         packerSearchMode: "both",
         packerSelectSearchQuery: "",
@@ -1099,6 +1210,178 @@
         var screens = document.querySelectorAll(".screen");
         for (var i = 0; i < screens.length; i += 1) { screens[i].classList.remove("active"); }
         byId(id).classList.add("active");
+        updateGearVisibility(id);
+        closeGearMenu();
+      }
+
+      function updateGearVisibility(screenId) {
+        if (!dom.btnGearMenu) { return; }
+        var show = Boolean(state.token) &&
+          (screenId === "screenCount" || screenId === "screenDetailed" ||
+           screenId === "screenBoard" || screenId === "screenPackerSelect" ||
+           screenId === "screenFlow");
+        if (show) { dom.btnGearMenu.classList.add("visible"); }
+        else { dom.btnGearMenu.classList.remove("visible"); }
+      }
+
+      function closeGearMenu() {
+        if (dom.gearMenu) { dom.gearMenu.classList.remove("open"); }
+      }
+
+      function toggleGearMenu() {
+        if (!dom.gearMenu) { return; }
+        dom.gearMenu.classList.toggle("open");
+      }
+
+      function normalizeEmail(email) {
+        return String(email || "").trim().toLowerCase();
+      }
+
+      function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      }
+
+      function getReportEmails() {
+        var list = loadJson(CONFIG.storageKeys.reportEmails, null);
+        if (!list || !list.length) {
+          list = CONFIG.reportEmails.slice();
+        }
+        return list.map(normalizeEmail).filter(Boolean);
+      }
+
+      function saveReportEmailsLocal(list) {
+        var clean = [];
+        var seen = {};
+        (list || []).forEach(function (email) {
+          var e = normalizeEmail(email);
+          if (!e || seen[e]) { return; }
+          seen[e] = true;
+          clean.push(e);
+        });
+        if (!clean.length) { clean = ["antoniozm007@gmail.com"]; }
+        saveJson(CONFIG.storageKeys.reportEmails, clean);
+        CONFIG.reportEmails = clean.slice();
+        return clean;
+      }
+
+      function refreshReportEmailsFromCloud() {
+        return apiRequest({ action: "list_report_emails" }).then(function (data) {
+          if (data.emails && data.emails.length) {
+            saveReportEmailsLocal(data.emails);
+          }
+          return getReportEmails();
+        }).catch(function () {
+          return getReportEmails();
+        });
+      }
+
+      function renderReportEmailList() {
+        if (!dom.reportEmailList) { return; }
+        var emails = getReportEmails();
+        dom.reportEmailList.innerHTML = "";
+        if (!emails.length) {
+          dom.reportEmailList.innerHTML = '<div class="empty-state">No hay correos configurados.</div>';
+          return;
+        }
+        emails.forEach(function (email) {
+          var row = document.createElement("div");
+          row.className = "email-row";
+          var text = document.createElement("span");
+          text.textContent = email;
+          var del = document.createElement("button");
+          del.type = "button";
+          del.className = "btn-mini danger";
+          del.textContent = "Quitar";
+          del.addEventListener("click", function () {
+            var next = getReportEmails().filter(function (e) { return e !== email; });
+            persistReportEmails(next);
+          });
+          row.appendChild(text);
+          row.appendChild(del);
+          dom.reportEmailList.appendChild(row);
+        });
+      }
+
+      function persistReportEmails(list) {
+        var clean = saveReportEmailsLocal(list);
+        renderReportEmailList();
+        if (!state.emailsEditPassword) {
+          showToast("Se requiere contraseña para guardar correos.", "error");
+          return;
+        }
+        apiRequest({
+          action: "save_report_emails",
+          emails: clean,
+          password: state.emailsEditPassword
+        }).then(function () {
+          showToast("Correos actualizados.", "success");
+        }).catch(function (error) {
+          showToast(error.message || "No se pudieron guardar los correos", "error");
+        });
+      }
+
+      function openEmailsPasswordModal() {
+        closeGearMenu();
+        if (state.emailsEditPassword) {
+          openReportEmailsModal();
+          return;
+        }
+        if (dom.emailsEditPassword) { dom.emailsEditPassword.value = ""; }
+        dom.modalEmailsPassword.classList.add("open");
+        setTimeout(function () {
+          if (dom.emailsEditPassword) { dom.emailsEditPassword.focus(); }
+        }, 50);
+      }
+
+      function closeEmailsPasswordModal() {
+        if (dom.modalEmailsPassword) { dom.modalEmailsPassword.classList.remove("open"); }
+        if (dom.emailsEditPassword) { dom.emailsEditPassword.value = ""; }
+      }
+
+      function handleConfirmEmailsPassword() {
+        var password = String(dom.emailsEditPassword && dom.emailsEditPassword.value || "");
+        if (!password) {
+          showToast("Escribe la contraseña.", "error");
+          return;
+        }
+        apiRequest({
+          action: "verify_emails_password",
+          password: password
+        }).then(function () {
+          state.emailsEditPassword = password;
+          closeEmailsPasswordModal();
+          openReportEmailsModal();
+        }).catch(function (error) {
+          showToast(error.message || "Contraseña incorrecta.", "error");
+          if (dom.emailsEditPassword) {
+            dom.emailsEditPassword.value = "";
+            dom.emailsEditPassword.focus();
+          }
+        });
+      }
+
+      function openReportEmailsModal() {
+        closeGearMenu();
+        renderReportEmailList();
+        if (dom.newReportEmail) { dom.newReportEmail.value = ""; }
+        dom.modalReportEmails.classList.add("open");
+        refreshReportEmailsFromCloud().then(function () { renderReportEmailList(); });
+      }
+
+      function handleAddReportEmail() {
+        var email = normalizeEmail(dom.newReportEmail && dom.newReportEmail.value);
+        if (!isValidEmail(email)) {
+          showToast("Escribe un correo válido.", "error");
+          return;
+        }
+        var list = getReportEmails();
+        if (list.indexOf(email) !== -1) {
+          showToast("Ese correo ya está en la lista.", "info");
+          return;
+        }
+        list.push(email);
+        persistReportEmails(list);
+        if (dom.newReportEmail) { dom.newReportEmail.value = ""; }
       }
 
       function goHome() {
@@ -1218,6 +1501,7 @@
         state.currentAudit = null;
         state.isRegistering = false;
         state.isSendingReport = false;
+        state.emailsEditPassword = "";
         state.shiftMarkerSent = false;
         state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         localStorage.removeItem(CONFIG.storageKeys.shiftDraft);
@@ -1939,7 +2223,7 @@
           packerCode: packerCode,
           packerName: packer ? packer.name : "",
           errors: errors,
-          emails: CONFIG.alertEmails
+          emails: getReportEmails()
         };
         sendToApi(alertPayload).catch(function () {
           state.pendingQueue.push(alertPayload);
@@ -1971,7 +2255,7 @@
           packerCode: packerCode,
           packerName: packer ? packer.name : "",
           countsAsError: true,
-          emails: CONFIG.alertEmails
+          emails: getReportEmails()
         };
 
         incrementPackerErrors(packerCode, summary);
@@ -2022,7 +2306,7 @@
           rows: rows,
           summary: hasDefect ? summary : "Sin defectos",
           countsAsError: hasDefect,
-          emails: CONFIG.alertEmails
+          emails: getReportEmails()
         };
 
         if (hasDefect) {
@@ -2280,10 +2564,12 @@
           showToast("Inicia sesión para enviar el reporte.", "error");
           return;
         }
+        closeGearMenu();
         state.isSendingReport = true;
-        if (dom.btnSendReport) {
-          dom.btnSendReport.disabled = true;
-          dom.btnSendReport.textContent = "Enviando reporte...";
+        var emails = getReportEmails();
+        if (dom.menuSendReport) {
+          dom.menuSendReport.disabled = true;
+          dom.menuSendReport.textContent = "Enviando...";
         }
         apiRequest({
           action: "send_report",
@@ -2293,17 +2579,21 @@
           supervisor: state.supervisor,
           shiftName: state.shiftName,
           mode: state.detailedMode ? "detailed" : "simple",
-          emails: CONFIG.reportEmails
+          emails: emails
         }).then(function (data) {
-          showToast("Reporte enviado a " + CONFIG.reportEmails.join(", ") +
+          if (data.skipped) {
+            showToast(data.reason || "No hay datos para enviar reporte.", "info");
+            return;
+          }
+          showToast("Reporte enviado a " + emails.join(", ") +
             (data.packers != null ? (" (" + data.packers + " empacadores)") : "") + ".", "success");
         }).catch(function (error) {
           showToast(error.message || "No se pudo enviar el reporte", "error");
         }).finally(function () {
           state.isSendingReport = false;
-          if (dom.btnSendReport) {
-            dom.btnSendReport.disabled = false;
-            dom.btnSendReport.textContent = "Enviar reporte";
+          if (dom.menuSendReport) {
+            dom.menuSendReport.disabled = false;
+            dom.menuSendReport.textContent = "Enviar reporte";
           }
         });
       }
@@ -2406,9 +2696,47 @@
 
         dom.btnCloseShiftSimple.addEventListener("click", handleCloseShift);
         dom.btnCloseShiftDetailed.addEventListener("click", handleCloseShift);
-        if (dom.btnSendReport) {
-          dom.btnSendReport.addEventListener("click", handleSendReport);
+        if (dom.btnGearMenu) {
+          dom.btnGearMenu.addEventListener("click", function (event) {
+            event.stopPropagation();
+            toggleGearMenu();
+          });
         }
+        if (dom.menuSendReport) {
+          dom.menuSendReport.addEventListener("click", handleSendReport);
+        }
+        if (dom.menuManageEmails) {
+          dom.menuManageEmails.addEventListener("click", openEmailsPasswordModal);
+        }
+        if (dom.btnConfirmEmailsPassword) {
+          dom.btnConfirmEmailsPassword.addEventListener("click", handleConfirmEmailsPassword);
+        }
+        if (dom.btnCancelEmailsPassword) {
+          dom.btnCancelEmailsPassword.addEventListener("click", closeEmailsPasswordModal);
+        }
+        if (dom.emailsEditPassword) {
+          dom.emailsEditPassword.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              handleConfirmEmailsPassword();
+            }
+          });
+        }
+        if (dom.btnAddReportEmail) {
+          dom.btnAddReportEmail.addEventListener("click", handleAddReportEmail);
+        }
+        if (dom.btnCloseReportEmails) {
+          dom.btnCloseReportEmails.addEventListener("click", function () {
+            dom.modalReportEmails.classList.remove("open");
+          });
+        }
+        document.addEventListener("click", function (event) {
+          if (!dom.gearMenu || !dom.btnGearMenu) { return; }
+          if (dom.gearMenu.contains(event.target) || dom.btnGearMenu.contains(event.target)) {
+            return;
+          }
+          closeGearMenu();
+        });
         dom.btnCancelCloseShift.addEventListener("click", function () { dom.modalCloseShift.classList.remove("open"); });
         dom.btnConfirmCloseShift.addEventListener("click", confirmCloseShift);
 
@@ -2512,7 +2840,19 @@
         dom.defectButtons = byId("defectButtons");
         dom.btnCloseShiftSimple = byId("btnCloseShiftSimple");
         dom.btnCloseShiftDetailed = byId("btnCloseShiftDetailed");
-        dom.btnSendReport = byId("btnSendReport");
+        dom.btnGearMenu = byId("btnGearMenu");
+        dom.gearMenu = byId("gearMenu");
+        dom.menuSendReport = byId("menuSendReport");
+        dom.menuManageEmails = byId("menuManageEmails");
+        dom.modalEmailsPassword = byId("modalEmailsPassword");
+        dom.emailsEditPassword = byId("emailsEditPassword");
+        dom.btnConfirmEmailsPassword = byId("btnConfirmEmailsPassword");
+        dom.btnCancelEmailsPassword = byId("btnCancelEmailsPassword");
+        dom.modalReportEmails = byId("modalReportEmails");
+        dom.reportEmailList = byId("reportEmailList");
+        dom.newReportEmail = byId("newReportEmail");
+        dom.btnAddReportEmail = byId("btnAddReportEmail");
+        dom.btnCloseReportEmails = byId("btnCloseReportEmails");
         dom.flowStepLabel = byId("flowStepLabel");
         dom.flowTitle = byId("flowTitle");
         dom.flowDescription = byId("flowDescription");
@@ -2555,6 +2895,7 @@
 
         state.packerCatalog = loadJson(CONFIG.storageKeys.packers, []);
         state.pendingQueue = loadJson(CONFIG.storageKeys.pendingQueue, []);
+        CONFIG.reportEmails = getReportEmails();
         state.packerSearchMode = localStorage.getItem(CONFIG.storageKeys.searchMode) || "both";
         state.packerSelectSearchMode = state.packerSearchMode;
         setSearchModeRadios("packerSearchMode", state.packerSearchMode);

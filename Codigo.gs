@@ -21,10 +21,14 @@ var CONFIG = {
   // Contraseña fija del turno. La app NUNCA la conoce; solo la valida el backend.
   APP_PASSWORD: "Chula2025",
 
+  // Contraseña para editar la lista de correos (reporte y alertas). Solo en backend.
+  EMAILS_EDIT_PASSWORD: "280208",
+
   // OBLIGATORIO: ID de TU hoja. URL: https://docs.google.com/spreadsheets/d/ESTE_ID/edit
   SPREADSHEET_ID: "1U31X4I7eGsxDd7OLRjpw75jlQH6wXfABv4mN0HcA5mc",
 
-  // Correos de alertas (3 errores) y reportes periódicos.
+  // Misma lista para alertas (3 errores) y reportes periódicos.
+  // Se puede editar desde la app; si no hay lista guardada, usa estos.
   ALERT_EMAILS: ["antoniozm007@gmail.com"],
   REPORT_EMAILS: ["antoniozm007@gmail.com"],
 
@@ -89,7 +93,7 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "detailed-wide-v3",
+        version: "detailed-wide-v6",
         message: "API activa. Formato detallado + reportes cada 2 horas."
       };
     }
@@ -174,6 +178,9 @@ function executeAction_(payload) {
     case "open_shift": return handleOpenShift_(payload);
     case "close_shift": return handleCloseShift_(payload);
     case "send_report": return handleSendReport_(payload);
+    case "list_report_emails": return handleListReportEmails_();
+    case "save_report_emails": return handleSaveReportEmails_(payload);
+    case "verify_emails_password": return handleVerifyEmailsPassword_(payload);
     default: return { ok: false, error: "Acción no reconocida: " + action };
   }
 }
@@ -557,7 +564,7 @@ function bumpSummary_(operationalDay, packerCode, packerName, countsAsError) {
 function handleSendAlert_(payload) {
   var sheet = getOrCreateSheet_(CONFIG.SHEET_ALERTS, HEADERS.alerts);
   var errors = payload.errors || [];
-  var emails = payload.emails && payload.emails.length ? payload.emails : CONFIG.ALERT_EMAILS;
+  var emails = resolveReportEmails_(payload.emails);
   var supervisor = payload.supervisor || payload._supervisorFromToken || "";
 
   sheet.appendRow([
@@ -680,7 +687,7 @@ var REPORT_DEFECT_COLS = [
 ];
 
 function handleSendReport_(payload) {
-  var emails = payload.emails && payload.emails.length ? payload.emails : CONFIG.REPORT_EMAILS;
+  var emails = resolveReportEmails_(payload.emails);
   var report = buildPackerReport_({
     shiftStartedAt: payload.shiftStartedAt || "",
     shiftName: payload.shiftName || "",
@@ -690,10 +697,22 @@ function handleSendReport_(payload) {
     sinceShiftStart: true
   });
 
+  if (!report.rows.length || report.totalAudits < 1) {
+    return {
+      ok: true,
+      action: "send_report",
+      skipped: true,
+      reason: "No hay información de inspecciones para reportar.",
+      packers: 0,
+      boxes: 0
+    };
+  }
+
   var mail = sendReportEmail_(report, emails);
   return {
     ok: true,
     action: "send_report",
+    skipped: false,
     packers: report.rows.length,
     boxes: report.totalBoxes,
     email: mail
@@ -703,17 +722,144 @@ function handleSendReport_(payload) {
 /**
  * Trigger automático cada 2 horas.
  * Ejecutar UNA VEZ desde el editor: instalarTriggerReporte()
+ * No envía si no hay turno activo o no hay datos.
  */
 function sendScheduledReport() {
+  var active = findActiveDetailedShift_();
+  if (!active.active) {
+    return { ok: true, skipped: true, reason: "No hay turno activo." };
+  }
+
   var report = buildPackerReport_({
-    shiftStartedAt: "",
-    shiftName: "",
-    supervisor: "",
-    operationalDay: getOperationalDayKey_(new Date()),
-    hoursBack: 2,
-    sinceShiftStart: false
+    shiftStartedAt: active.shiftStartedAtIso || "",
+    shiftName: active.shiftName || "",
+    supervisor: active.supervisor || "",
+    operationalDay: active.operationalDay || getOperationalDayKey_(new Date()),
+    hoursBack: 0,
+    sinceShiftStart: Boolean(active.shiftStartedAtIso),
+    sinceRow: active.startRow || 0
   });
-  return sendReportEmail_(report, CONFIG.REPORT_EMAILS);
+
+  if (!report.rows.length || report.totalAudits < 1) {
+    return { ok: true, skipped: true, reason: "Turno activo sin información para reportar." };
+  }
+
+  var emails = getStoredReportEmails_();
+  return {
+    ok: true,
+    skipped: false,
+    email: sendReportEmail_(report, emails),
+    packers: report.rows.length,
+    boxes: report.totalBoxes
+  };
+}
+
+function handleListReportEmails_() {
+  return { ok: true, action: "list_report_emails", emails: getStoredReportEmails_() };
+}
+
+function handleVerifyEmailsPassword_(payload) {
+  if (String(payload.password || "") !== String(CONFIG.EMAILS_EDIT_PASSWORD || "")) {
+    return { ok: false, error: "Contraseña incorrecta." };
+  }
+  return { ok: true, action: "verify_emails_password" };
+}
+
+function handleSaveReportEmails_(payload) {
+  if (String(payload.password || "") !== String(CONFIG.EMAILS_EDIT_PASSWORD || "")) {
+    return { ok: false, error: "Contraseña incorrecta. No se pudieron guardar los correos." };
+  }
+  var emails = normalizeEmailList_(payload.emails || []);
+  if (!emails.length) {
+    emails = CONFIG.REPORT_EMAILS.slice();
+  }
+  PropertiesService.getScriptProperties().setProperty("REPORT_EMAILS", JSON.stringify(emails));
+  return { ok: true, action: "save_report_emails", emails: emails };
+}
+
+function resolveReportEmails_(incoming) {
+  var fromPayload = normalizeEmailList_(incoming || []);
+  if (fromPayload.length) { return fromPayload; }
+  return getStoredReportEmails_();
+}
+
+function getStoredReportEmails_() {
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty("REPORT_EMAILS");
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      var list = normalizeEmailList_(parsed);
+      if (list.length) { return list; }
+    }
+  } catch (ignoreProp) {
+  }
+  return CONFIG.REPORT_EMAILS.slice();
+}
+
+function normalizeEmailList_(list) {
+  var out = [];
+  var seen = {};
+  var i;
+  for (i = 0; i < (list || []).length; i += 1) {
+    var email = String(list[i] || "").trim().toLowerCase();
+    if (!email || seen[email]) { continue; }
+    if (email.indexOf("@") === -1) { continue; }
+    seen[email] = true;
+    out.push(email);
+  }
+  return out;
+}
+
+/**
+ * Detecta si hay un turno detallado abierto:
+ * último marcador relevante = CAMBIO DE TURNO (sin CIERRE posterior).
+ */
+function findActiveDetailedShift_() {
+  var sheet = ensureDetailedSheet_();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return { active: false };
+  }
+  var width = HEADERS.detailed.length;
+  var values = sheet.getRange(2, 1, lastRow, Math.min(width, 6)).getValues();
+  var lastOpenRow = -1;
+  var lastCloseRow = -1;
+  var openMeta = { supervisor: "", shiftName: "", operationalDay: "", timestamp: "" };
+  var i;
+  for (i = 0; i < values.length; i += 1) {
+    var first = String(values[i][0] || "");
+    if (first.indexOf("CAMBIO DE TURNO") !== -1) {
+      lastOpenRow = i + 2;
+      openMeta.supervisor = String(values[i][1] || "").replace(/^Supervisor:\s*/i, "");
+      openMeta.timestamp = values[i][2];
+      openMeta.operationalDay = String(values[i][4] || "").replace(/^Día operativo:\s*/i, "");
+      openMeta.shiftName = String(values[i][5] || "").replace(/^Turno:\s*/i, "");
+    }
+    if (first.indexOf("CIERRE DE TURNO") !== -1) {
+      lastCloseRow = i + 2;
+    }
+  }
+
+  if (lastOpenRow < 0 || lastCloseRow > lastOpenRow) {
+    return { active: false };
+  }
+
+  var shiftStartedAtIso = "";
+  if (openMeta.timestamp instanceof Date) {
+    shiftStartedAtIso = openMeta.timestamp.toISOString();
+  } else if (openMeta.timestamp) {
+    var ms = parseSheetTimestampMs_(openMeta.timestamp);
+    if (ms) { shiftStartedAtIso = new Date(ms).toISOString(); }
+  }
+
+  return {
+    active: true,
+    startRow: lastOpenRow,
+    supervisor: openMeta.supervisor,
+    shiftName: openMeta.shiftName,
+    operationalDay: openMeta.operationalDay || getOperationalDayKey_(new Date()),
+    shiftStartedAtIso: shiftStartedAtIso
+  };
 }
 
 function instalarTriggerReporte() {
@@ -737,8 +883,10 @@ function buildPackerReport_(options) {
   var headers = HEADERS.detailed;
   var map = {};
   var totalBoxes = 0;
+  var totalAudits = 0;
   var cutoffMs = 0;
   var shiftStartMs = 0;
+  var sinceRow = Number(options.sinceRow) || 0;
 
   if (options.hoursBack > 0) {
     cutoffMs = new Date().getTime() - options.hoursBack * 60 * 60 * 1000;
@@ -755,6 +903,10 @@ function buildPackerReport_(options) {
     var values = sheet.getRange(2, 1, lastRow, headers.length).getValues();
     var r;
     for (r = 0; r < values.length; r += 1) {
+      var sheetRow = r + 2;
+      if (sinceRow && sheetRow <= sinceRow) {
+        continue;
+      }
       var row = values[r];
       var first = String(row[0] || "");
       if (first.indexOf("CAMBIO DE TURNO") !== -1 || first.indexOf("CIERRE DE TURNO") !== -1) {
@@ -807,6 +959,7 @@ function buildPackerReport_(options) {
       var item = map[code];
       if (name) { item.name = name; }
       item.boxes += 1;
+      totalAudits += 1;
       item.countTotal += count;
       item.desv += assigned;
       item["Tallones"] += tallones;
@@ -827,10 +980,13 @@ function buildPackerReport_(options) {
   Object.keys(map).sort().forEach(function (code) {
     var item = map[code];
     var pct = item.countTotal > 0 ? Math.round((item.desv / item.countTotal) * 100) : 0;
+    var countAvg = item.boxes > 0 ? Math.round(item.countTotal / item.boxes) : 0;
     rows.push({
       code: item.code,
       name: item.name,
       cajas: item.boxesWithDev,
+      count: countAvg,
+      countT: item.countTotal,
       desv: item.desv,
       pctDesv: pct,
       defects: {
@@ -850,10 +1006,11 @@ function buildPackerReport_(options) {
     operationalDay: options.operationalDay || "",
     shiftName: options.shiftName || "",
     supervisor: options.supervisor || "",
-    windowLabel: options.sinceShiftStart
+    windowLabel: options.sinceShiftStart || options.sinceRow
       ? ("Desde inicio de turno" + (options.shiftStartedAt ? " (" + formatTimestamp_(options.shiftStartedAt) + ")" : ""))
       : ("Últimas " + (options.hoursBack || 2) + " horas"),
     totalBoxes: totalBoxes,
+    totalAudits: totalAudits,
     rows: rows
   };
 }
@@ -940,6 +1097,7 @@ function buildReportHtml_(report) {
       "<td>" + esc_(r.code) + "</td>" +
       "<td>" + esc_(r.name) + "</td>" +
       "<td style='text-align:right;'>" + r.cajas + "</td>" +
+      "<td style='text-align:right;'>" + (r.count != null ? r.count : "—") + "</td>" +
       "<td style='text-align:right;'>" + r.desv + "</td>" +
       "<td style='text-align:right;'>" + r.pctDesv + "%</td>" +
       "</tr>";
@@ -948,6 +1106,7 @@ function buildReportHtml_(report) {
       "<tr>" +
       "<td>" + esc_(r.code) + "</td>" +
       "<td>" + esc_(r.name) + "</td>" +
+      "<td style='text-align:right;'>" + (r.countT != null ? r.countT : "—") + "</td>" +
       "<td style='text-align:right;'>" + (r.desv || 0) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Acomodo"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Pudrición"]) + "</td>" +
@@ -960,8 +1119,8 @@ function buildReportHtml_(report) {
   }
 
   if (!rows.length) {
-    summaryRows = "<tr><td colspan='5'>Sin registros en la ventana del reporte.</td></tr>";
-    defectRows = "<tr><td colspan='10'>Sin registros en la ventana del reporte.</td></tr>";
+    summaryRows = "<tr><td colspan='6'>Sin registros en la ventana del reporte.</td></tr>";
+    defectRows = "<tr><td colspan='11'>Sin registros en la ventana del reporte.</td></tr>";
   }
 
   return (
@@ -978,7 +1137,7 @@ function buildReportHtml_(report) {
     "<h3 style='margin:18px 0 8px;'>Resumen por empacador</h3>" +
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
-    "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>DESV</th><th>%DESV</th>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>COUNT</th><th>DESV</th><th>%DESV</th>" +
     "</tr>" +
     summaryRows +
     "</table>" +
@@ -986,7 +1145,7 @@ function buildReportHtml_(report) {
     "<h3 style='margin:22px 0 8px;'>Detalle por tipo de defecto</h3>" +
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
-    "<th>CODIGO</th><th>NOMBRE</th><th>DESV</th>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>COUNT T.</th><th>DESV</th>" +
     "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Tallones</th>" +
     "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Mal Pesado</th>" +
     "</tr>" +
@@ -997,6 +1156,8 @@ function buildReportHtml_(report) {
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'><th>Abreviatura</th><th>Significado</th></tr>" +
     "<tr><td><b>CAJAS</b></td><td>Número total de cajas que presentan desviaciones / errores</td></tr>" +
+    "<tr><td><b>COUNT</b></td><td>Cantidad de papayas por caja (promedio del empacador)</td></tr>" +
+    "<tr><td><b>COUNT T.</b></td><td>Cantidad de papayas totales que inspeccionó el empacador</td></tr>" +
     "<tr><td><b>DESV</b></td><td>Cantidad de papayas que presentan un error</td></tr>" +
     "<tr><td><b>%DESV</b></td><td>Porcentaje de desviación respecto Count (papayas con error / papayas totales del empacador)</td></tr>" +
     "</table>" +

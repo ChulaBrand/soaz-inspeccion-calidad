@@ -74,8 +74,20 @@ Acciones protegidas: `list_packers`, `upsert_packer`, `delete_packer`, `register
    - **Count** (5–20): total de papayas en la caja.
    - **Defectos**: lista táctil (Pudrición, Tallones, Calibre Revuelto, Colores Mixtos, Mal Acomodo, Mal Envuelto, Mal Pesado). En cada defecto solo se elige **la cantidad** de papayas afectadas; asignación exclusiva (una papaya, un defecto). **Mal Pesado** es a nivel caja (Peso ↑/↓) y no consume Count.
    - Las papayas restantes se calculan automáticamente como buenas.
-   - **Submit** → empacador → guarda en `Inspecciones Detalladas` (una fila por defecto) → vuelve a **Count**.
+   - **Submit** → empacador → guarda en `Inspecciones Detalladas` (**1 fila por caja**, con una columna por cada defecto) → vuelve a **Count**.
    - Una auditoría con ≥1 defecto suma **1 error**; sin defectos suma **0** y se registra como `Sin defectos`.
+
+### Formato de `Inspecciones Detalladas`
+
+Columnas visibles:
+
+`Audit ID | Timestamp | Código empacador | Nombre empacador | Count | Papayas con defecto | Papayas buenas | Tallones | Mal Acomodo | Pudrición | Mal Envuelto | Colores Mixtos | Calibre Revuelto | Mal Pesado`
+
+- **1 fila = 1 caja** (ya no se repite una fila por cada defecto).
+- Supervisor e inicio de turno aparecen en la **fila amarilla** de cambio de turno.
+- Cada defecto muestra su cantidad (`0` si no hubo).
+- `Mal Pesado` guarda `Peso ↑` o `Peso ↓`.
+- Si existía el formato viejo (columna `Defecto`), se renombra a `Inspecciones Detalladas (historial)` y se crea una hoja limpia.
 5. **Alerta de 3 errores**: al tercer registro con error de un empacador, muestra modal y envía email (una vez por turno y empacador).
 6. **Cerrar Turno**: limpia contadores, borrador y token local; regresa al inicio.
 
