@@ -113,8 +113,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v11",
-        message: "API activa. Reportes v11: tipos de desviación + hoja Inspecciones Bruto."
+        version: "report-v12",
+        message: "API activa. Reportes v12: envío automático al cerrar turno."
       };
     }
     return respond_(e, result);
@@ -764,6 +764,20 @@ function handleCloseShift_(payload) {
   var mode = payload.mode === "detailed" ? "detailed" : "simple";
   var sheet = shiftSheetFor_(mode);
   var width = mode === "detailed" ? HEADERS.detailed.length : HEADERS.simple.length;
+  var reportInfo = { sent: false, skipped: true, reason: "Sin envío de reporte." };
+
+  // Antes de marcar el cierre: envía el reporte acumulado del turno.
+  if (mode === "detailed") {
+    try {
+      reportInfo = sendFinalShiftReport_(payload);
+    } catch (reportError) {
+      reportInfo = {
+        sent: false,
+        skipped: true,
+        reason: "No se pudo enviar el reporte de cierre: " + errText_(reportError)
+      };
+    }
+  }
 
   var markerRow = new Array(width).fill("");
   markerRow[0] = "—— CIERRE DE TURNO ——";
@@ -779,7 +793,47 @@ function handleCloseShift_(payload) {
   range.setFontWeight("bold");
   range.setBackground("#e2e8f0");
 
-  return { ok: true, action: "close_shift", mode: mode };
+  return { ok: true, action: "close_shift", mode: mode, report: reportInfo };
+}
+
+function sendFinalShiftReport_(payload) {
+  var active = findActiveDetailedShift_();
+  var emails = resolveReportEmails_(payload.emails);
+  var report = buildPackerReport_({
+    shiftStartedAt: payload.shiftStartedAt || active.shiftStartedAtIso || "",
+    shiftName: payload.shiftName || active.shiftName || "",
+    supervisor: payload.supervisor || payload._supervisorFromToken || active.supervisor || "",
+    operationalDay: payload.operationalDay || active.operationalDay || getOperationalDayKey_(new Date()),
+    hoursBack: 0,
+    sinceShiftStart: true,
+    sinceRow: active.active ? (active.startRow || 0) : 0
+  });
+
+  if (!report.rows.length || report.totalAudits < 1) {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "Turno cerrado sin información para reportar.",
+      packers: 0,
+      boxes: 0
+    };
+  }
+
+  // Marca en el correo que es el cierre de turno.
+  report.windowLabel = "Cierre de turno · acumulado" +
+    (payload.shiftStartedAt || active.shiftStartedAtIso
+      ? " (desde " + formatTimestamp_(payload.shiftStartedAt || active.shiftStartedAtIso) + ")"
+      : "");
+
+  var mail = sendReportEmail_(report, emails);
+  return {
+    sent: Boolean(mail && mail.sent),
+    skipped: false,
+    packers: report.rows.length,
+    boxes: report.totalBoxes,
+    email: mail,
+    reason: mail && mail.sent ? "Reporte de cierre enviado." : (mail && mail.detail) || "No se envió el correo."
+  };
 }
 
 /* =========================================================================

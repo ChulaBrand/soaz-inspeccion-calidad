@@ -1068,7 +1068,7 @@
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbyZ_Eg7HrHY5ulrDtWVTnk3LFmBV2Pfj5ebS5fkavuC4Q2adB77Ff35Lp8AZ8niV7Xr/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbxCMqpqeSySFm7_ybYsnr-QHqdHbSkyuHRbnLV5z6yzHUa1njLB5GlxYEoHebKx8P_d/exec",
         reportEmails: ["antoniozm007@gmail.com"],
         operationalDayStartHour: 16,
         storageKeys: {
@@ -2628,16 +2628,34 @@
           action: "close_shift",
           timestamp: nowIso(),
           operationalDay: state.operationalDay,
+          shiftStartedAt: state.shiftStartedAt,
           supervisor: state.supervisor,
-          mode: state.detailedMode ? "detailed" : "simple"
+          shiftName: state.shiftName,
+          mode: state.detailedMode ? "detailed" : "simple",
+          emails: getReportEmails()
         };
-        sendToApi(closePayload).catch(function () {});
-        resetShiftState();
-        dom.supervisorName.value = "";
-        if (dom.password) { dom.password.value = ""; }
-        updateHeader();
-        showScreen("screenLogin");
-        showToast("Turno cerrado correctamente.", "info");
+
+        apiRequest(closePayload).then(function (data) {
+          var report = data && data.report;
+          if (report && report.sent) {
+            showToast("Turno cerrado. Reporte final enviado.", "success");
+          } else if (report && report.skipped) {
+            showToast("Turno cerrado. " + (report.reason || "Sin datos para reporte."), "info");
+          } else {
+            showToast("Turno cerrado correctamente.", "info");
+          }
+        }).catch(function () {
+          // Asegura el cierre local aunque falle la red; el reporte puede quedar pendiente.
+          state.pendingQueue.push(closePayload);
+          savePendingQueue();
+          showToast("Turno cerrado localmente. Reporte pendiente de sincronizar.", "info");
+        }).finally(function () {
+          resetShiftState();
+          dom.supervisorName.value = "";
+          if (dom.password) { dom.password.value = ""; }
+          updateHeader();
+          showScreen("screenLogin");
+        });
       }
 
       /* ---------- PWA / entorno ---------- */
