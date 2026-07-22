@@ -45,11 +45,23 @@ var HEADERS = {
     "Timestamp", "Día operativo", "Inicio de turno", "Supervisor",
     "Código empacador", "Nombre empacador", "Defecto", "Detalle", "Record ID"
   ],
+  // Formato limpio: 1 fila = 1 caja. Una columna por cada defecto.
+  // Supervisor e inicio de turno viven en la fila amarilla de CAMBIO DE TURNO.
   detailed: [
-    "Audit ID", "Timestamp", "Día operativo", "Inicio de turno", "Supervisor",
-    "Código empacador", "Nombre empacador", "Count", "Papayas con defecto",
-    "Papayas buenas", "Defecto", "Variante", "Cantidad", "Mal pesado",
-    "Resumen", "Record ID"
+    "Audit ID",
+    "Timestamp",
+    "Código empacador",
+    "Nombre empacador",
+    "Count",
+    "Papayas con defecto",
+    "Papayas buenas",
+    "Tallones",
+    "Mal Acomodo",
+    "Pudrición",
+    "Mal Envuelto",
+    "Colores Mixtos",
+    "Calibre Revuelto",
+    "Mal Pesado"
   ],
   packers: ["Código", "Nombre", "Activo"],
   alerts: [
@@ -76,7 +88,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        message: "API activa. Lista para autenticación, inspecciones y empacadores."
+        version: "detailed-wide-v2",
+        message: "API activa. Formato detallado: 1 fila por caja con columnas por defecto."
       };
     }
     return respond_(e, result);
@@ -351,48 +364,153 @@ function handleRegisterSimple_(payload) {
 }
 
 /* =========================================================================
- *  INSPECCIONES DETALLADAS (una fila por defecto/grupo)
+ *  INSPECCIONES DETALLADAS
+ *  Una fila por caja. Cada defecto tiene su propia columna con la cantidad.
  * ========================================================================= */
 
 function handleRegisterDetailed_(payload) {
-  var sheet = getOrCreateSheet_(CONFIG.SHEET_DETAILED, HEADERS.detailed);
+  var sheet = ensureDetailedSheet_();
   var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
-  var supervisor = payload.supervisor || payload._supervisorFromToken || "";
-  var rows = payload.rows && payload.rows.length ? payload.rows : [{
-    defecto: "Sin defectos", variante: "", cantidad: 0, malPesado: ""
-  }];
+  var qtyByDefect = aggregateDetailedQtys_(payload.rows || []);
+  var malPesado = qtyByDefect.malPesadoText || "";
 
-  var ts = formatTimestamp_(payload.timestamp);
-  var output = [];
-  var i;
-  for (i = 0; i < rows.length; i += 1) {
-    var r = rows[i];
-    output.push([
-      payload.auditId || "",
-      ts,
-      operationalDay,
-      payload.shiftStartedAt || "",
-      supervisor,
-      payload.packerCode || "",
-      payload.packerName || "",
-      payload.count != null ? payload.count : "",
-      payload.assigned != null ? payload.assigned : "",
-      payload.buenas != null ? payload.buenas : "",
-      r.defecto || "",
-      r.variante || "",
-      (r.cantidad != null ? r.cantidad : ""),
-      r.malPesado || "",
-      payload.summary || "",
-      payload.recordId || ""
-    ]);
-  }
-
-  var startRow = sheet.getLastRow() + 1;
-  sheet.getRange(startRow, 1, output.length, HEADERS.detailed.length).setValues(output);
+  // 1 sola fila por caja. Cada defecto en su columna.
+  sheet.appendRow([
+    payload.auditId || "",
+    formatTimestamp_(payload.timestamp),
+    payload.packerCode || "",
+    payload.packerName || "",
+    payload.count != null ? payload.count : "",
+    payload.assigned != null ? payload.assigned : 0,
+    payload.buenas != null ? payload.buenas : "",
+    qtyByDefect["Tallones"] || 0,
+    qtyByDefect["Mal Acomodo"] || 0,
+    qtyByDefect["Pudrición"] || 0,
+    qtyByDefect["Mal Envuelto"] || 0,
+    qtyByDefect["Colores Mixtos"] || 0,
+    qtyByDefect["Calibre Revuelto"] || 0,
+    malPesado
+  ]);
 
   bumpSummary_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
 
-  return { ok: true, action: "register_detailed_inspection", operationalDay: operationalDay, rows: output.length };
+  return { ok: true, action: "register_detailed_inspection", operationalDay: operationalDay, rows: 1 };
+}
+
+/**
+ * Convierte el arreglo de filas por defecto en un mapa de cantidades por columna.
+ * Mal Pesado no consume Count: se guarda como texto "Peso ↑" / "Peso ↓".
+ */
+function aggregateDetailedQtys_(rows) {
+  var map = {
+    "Pudrición": 0,
+    "Tallones": 0,
+    "Calibre Revuelto": 0,
+    "Colores Mixtos": 0,
+    "Mal Acomodo": 0,
+    "Mal Envuelto": 0,
+    malPesadoText: ""
+  };
+
+  var i;
+  for (i = 0; i < rows.length; i += 1) {
+    var r = rows[i] || {};
+    var name = String(r.defecto || "").trim();
+    if (!name || name === "Sin defectos" || name === "Sin fruta desviada") {
+      continue;
+    }
+    if (name === "Mal Pesado") {
+      map.malPesadoText = r.malPesado || r.variante || "Sí";
+      continue;
+    }
+    if (Object.prototype.hasOwnProperty.call(map, name)) {
+      map[name] += Number(r.cantidad) || 0;
+    }
+  }
+  return map;
+}
+
+/**
+ * Asegura la hoja con el formato limpio.
+ * Si existe el formato viejo (columnas Defecto / Día operativo...),
+ * lo renombra a historial y crea una hoja nueva.
+ */
+function ensureDetailedSheet_() {
+  var ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName(CONFIG.SHEET_DETAILED);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEET_DETAILED);
+    writeDetailedHeader_(sheet);
+    return sheet;
+  }
+
+  if (sheet.getLastRow() === 0) {
+    writeDetailedHeader_(sheet);
+    return sheet;
+  }
+
+  if (!isOldDetailedFormat_(sheet)) {
+    // Si el encabezado no coincide exactamente, reescribe solo la fila 1
+    // cuando está vacío de datos útiles o cuando falta alguna columna de defecto.
+    ensureDetailedHeaderRow_(sheet);
+    return sheet;
+  }
+
+  // Formato viejo: preservar historial y empezar limpio.
+  var archiveName = "Inspecciones Detalladas (historial)";
+  var existing = ss.getSheetByName(archiveName);
+  var suffix = 2;
+  while (existing) {
+    archiveName = "Inspecciones Detalladas (historial " + suffix + ")";
+    existing = ss.getSheetByName(archiveName);
+    suffix += 1;
+  }
+  sheet.setName(archiveName);
+
+  var fresh = ss.insertSheet(CONFIG.SHEET_DETAILED);
+  writeDetailedHeader_(fresh);
+  return fresh;
+}
+
+function isOldDetailedFormat_(sheet) {
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  var i;
+  for (i = 0; i < headers.length; i += 1) {
+    var h = String(headers[i] || "").trim();
+    if (h === "Defecto" || h === "Día operativo" || h === "Variante" || h === "Record ID") {
+      return true;
+    }
+  }
+  return false;
+}
+
+function ensureDetailedHeaderRow_(sheet) {
+  var expected = HEADERS.detailed;
+  var current = sheet.getRange(1, 1, 1, expected.length).getDisplayValues()[0];
+  var needsRewrite = false;
+  var i;
+  for (i = 0; i < expected.length; i += 1) {
+    if (String(current[i] || "").trim() !== expected[i]) {
+      needsRewrite = true;
+      break;
+    }
+  }
+  if (needsRewrite && sheet.getLastRow() <= 1) {
+    sheet.clear();
+    writeDetailedHeader_(sheet);
+  } else if (needsRewrite) {
+    sheet.getRange(1, 1, 1, expected.length).setValues([expected]);
+    sheet.getRange(1, 1, 1, expected.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+}
+
+function writeDetailedHeader_(sheet) {
+  sheet.appendRow(HEADERS.detailed);
+  sheet.getRange(1, 1, 1, HEADERS.detailed.length).setFontWeight("bold");
+  sheet.setFrozenRows(1);
 }
 
 /* =========================================================================
@@ -485,7 +603,7 @@ function handleSendAlert_(payload) {
 
 function shiftSheetFor_(mode) {
   return mode === "detailed"
-    ? getOrCreateSheet_(CONFIG.SHEET_DETAILED, HEADERS.detailed)
+    ? ensureDetailedSheet_()
     : getOrCreateSheet_(CONFIG.SHEET_SIMPLE, HEADERS.simple);
 }
 
@@ -501,11 +619,12 @@ function handleOpenShift_(payload) {
   // Fila marcador resaltada.
   var markerRow = new Array(width).fill("");
   markerRow[0] = "—— CAMBIO DE TURNO ——";
-  if (width > 1) markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
-  if (width > 2) markerRow[2] = "Día operativo: " + operationalDay;
-  if (width > 3) markerRow[3] = "Modo: " + mode;
-  if (width > 4) markerRow[4] = "Empacadores: " + (payload.activePackerCount || 0);
-  if (width > 5) markerRow[5] = formatTimestamp_(payload.timestamp);
+  markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
+  markerRow[2] = formatTimestamp_(payload.timestamp);
+  markerRow[3] = "Empacadores: " + (payload.activePackerCount || 0);
+  if (width > 4) {
+    markerRow[4] = "Día operativo: " + operationalDay;
+  }
 
   sheet.appendRow(markerRow);
   var markerRowIndex = sheet.getLastRow();
@@ -523,9 +642,11 @@ function handleCloseShift_(payload) {
 
   var markerRow = new Array(width).fill("");
   markerRow[0] = "—— CIERRE DE TURNO ——";
-  if (width > 1) markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
-  if (width > 2) markerRow[2] = "Día operativo: " + (payload.operationalDay || getOperationalDayKey_(new Date()));
-  if (width > 5) markerRow[5] = formatTimestamp_(payload.timestamp);
+  markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
+  markerRow[2] = formatTimestamp_(payload.timestamp);
+  if (width > 3) {
+    markerRow[3] = "Día operativo: " + (payload.operationalDay || getOperationalDayKey_(new Date()));
+  }
 
   sheet.appendRow(markerRow);
   var idx = sheet.getLastRow();
@@ -609,11 +730,15 @@ function testDetailed() {
     packerCode: "E001",
     packerName: "Ana Ruiz",
     count: 8,
-    assigned: 3,
-    buenas: 5,
+    assigned: 5,
+    buenas: 3,
     countsAsError: true,
-    summary: "Pudrición 3",
-    rows: [{ defecto: "Pudrición", variante: "", cantidad: 3, malPesado: "" }]
+    summary: "Pudrición 3 · Mal Envuelto 2 · Mal Pesado (Peso ↓)",
+    rows: [
+      { defecto: "Pudrición", variante: "", cantidad: 3, malPesado: "" },
+      { defecto: "Mal Envuelto", variante: "", cantidad: 2, malPesado: "" },
+      { defecto: "Mal Pesado", variante: "Peso ↓", cantidad: 0, malPesado: "Peso ↓" }
+    ]
   });
   Logger.log(JSON.stringify(result));
 }
