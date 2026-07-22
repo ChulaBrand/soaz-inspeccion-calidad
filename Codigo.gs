@@ -93,7 +93,7 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "detailed-wide-v6",
+        version: "report-cols-v8",
         message: "API activa. Formato detallado + reportes cada 2 horas."
       };
     }
@@ -1096,8 +1096,7 @@ function buildReportHtml_(report) {
       "<tr>" +
       "<td>" + esc_(r.code) + "</td>" +
       "<td>" + esc_(r.name) + "</td>" +
-      "<td style='text-align:right;'>" + r.cajas + "</td>" +
-      "<td style='text-align:right;'>" + (r.count != null ? r.count : "—") + "</td>" +
+      "<td style='text-align:right;'>" + (r.countT != null ? r.countT : "—") + "</td>" +
       "<td style='text-align:right;'>" + r.desv + "</td>" +
       "<td style='text-align:right;'>" + r.pctDesv + "%</td>" +
       "</tr>";
@@ -1106,6 +1105,7 @@ function buildReportHtml_(report) {
       "<tr>" +
       "<td>" + esc_(r.code) + "</td>" +
       "<td>" + esc_(r.name) + "</td>" +
+      "<td style='text-align:right;'>" + r.cajas + "</td>" +
       "<td style='text-align:right;'>" + (r.countT != null ? r.countT : "—") + "</td>" +
       "<td style='text-align:right;'>" + (r.desv || 0) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Acomodo"]) + "</td>" +
@@ -1119,13 +1119,14 @@ function buildReportHtml_(report) {
   }
 
   if (!rows.length) {
-    summaryRows = "<tr><td colspan='6'>Sin registros en la ventana del reporte.</td></tr>";
-    defectRows = "<tr><td colspan='11'>Sin registros en la ventana del reporte.</td></tr>";
+    summaryRows = "<tr><td colspan='5'>Sin registros en la ventana del reporte.</td></tr>";
+    defectRows = "<tr><td colspan='12'>Sin registros en la ventana del reporte.</td></tr>";
   }
 
   return (
     "<div style='font-family:Arial,sans-serif;color:#111;'>" +
     "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
+    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-cols-v8</p>" +
     "<p style='margin:0 0 16px;color:#444;'>" +
     "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
     "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
@@ -1137,7 +1138,7 @@ function buildReportHtml_(report) {
     "<h3 style='margin:18px 0 8px;'>Resumen por empacador</h3>" +
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
-    "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>COUNT</th><th>DESV</th><th>%DESV</th>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>COUNT T.</th><th>DESV</th><th>%DESV</th>" +
     "</tr>" +
     summaryRows +
     "</table>" +
@@ -1145,7 +1146,7 @@ function buildReportHtml_(report) {
     "<h3 style='margin:22px 0 8px;'>Detalle por tipo de defecto</h3>" +
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
-    "<th>CODIGO</th><th>NOMBRE</th><th>COUNT T.</th><th>DESV</th>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>COUNT T.</th><th>DESV</th>" +
     "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Tallones</th>" +
     "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Mal Pesado</th>" +
     "</tr>" +
@@ -1156,7 +1157,6 @@ function buildReportHtml_(report) {
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'><th>Abreviatura</th><th>Significado</th></tr>" +
     "<tr><td><b>CAJAS</b></td><td>Número total de cajas que presentan desviaciones / errores</td></tr>" +
-    "<tr><td><b>COUNT</b></td><td>Cantidad de papayas por caja (promedio del empacador)</td></tr>" +
     "<tr><td><b>COUNT T.</b></td><td>Cantidad de papayas totales que inspeccionó el empacador</td></tr>" +
     "<tr><td><b>DESV</b></td><td>Cantidad de papayas que presentan un error</td></tr>" +
     "<tr><td><b>%DESV</b></td><td>Porcentaje de desviación respecto Count (papayas con error / papayas totales del empacador)</td></tr>" +
