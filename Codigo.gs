@@ -24,8 +24,9 @@ var CONFIG = {
   // OBLIGATORIO: ID de TU hoja. URL: https://docs.google.com/spreadsheets/d/ESTE_ID/edit
   SPREADSHEET_ID: "1U31X4I7eGsxDd7OLRjpw75jlQH6wXfABv4mN0HcA5mc",
 
-  // Correos que reciben la alerta de 3 errores.
-  ALERT_EMAILS: ["calidad@soaz.com", "supervision@soaz.com"],
+  // Correos de alertas (3 errores) y reportes periódicos.
+  ALERT_EMAILS: ["antoniozm007@gmail.com"],
+  REPORT_EMAILS: ["antoniozm007@gmail.com"],
 
   // Vigencia del token de sesión (horas).
   SESSION_HOURS: 12,
@@ -88,8 +89,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "detailed-wide-v2",
-        message: "API activa. Formato detallado: 1 fila por caja con columnas por defecto."
+        version: "detailed-wide-v3",
+        message: "API activa. Formato detallado + reportes cada 2 horas."
       };
     }
     return respond_(e, result);
@@ -172,6 +173,7 @@ function executeAction_(payload) {
     case "send_alert": return handleSendAlert_(payload);
     case "open_shift": return handleOpenShift_(payload);
     case "close_shift": return handleCloseShift_(payload);
+    case "send_report": return handleSendReport_(payload);
     default: return { ok: false, error: "Acción no reconocida: " + action };
   }
 }
@@ -625,6 +627,9 @@ function handleOpenShift_(payload) {
   if (width > 4) {
     markerRow[4] = "Día operativo: " + operationalDay;
   }
+  if (width > 5) {
+    markerRow[5] = "Turno: " + (payload.shiftName || "");
+  }
 
   sheet.appendRow(markerRow);
   var markerRowIndex = sheet.getLastRow();
@@ -655,6 +660,360 @@ function handleCloseShift_(payload) {
   range.setBackground("#e2e8f0");
 
   return { ok: true, action: "close_shift", mode: mode };
+}
+
+/* =========================================================================
+ *  REPORTE CADA 2 HORAS / MANUAL
+ *  CAJAS = cajas con desviación
+ *  DESV  = papayas con error
+ *  %DESV = DESV / Count total * 100
+ * ========================================================================= */
+
+var REPORT_DEFECT_COLS = [
+  "Mal Acomodo",
+  "Pudrición",
+  "Mal Envuelto",
+  "Tallones",
+  "Colores Mixtos",
+  "Calibre Revuelto",
+  "Mal Pesado"
+];
+
+function handleSendReport_(payload) {
+  var emails = payload.emails && payload.emails.length ? payload.emails : CONFIG.REPORT_EMAILS;
+  var report = buildPackerReport_({
+    shiftStartedAt: payload.shiftStartedAt || "",
+    shiftName: payload.shiftName || "",
+    supervisor: payload.supervisor || payload._supervisorFromToken || "",
+    operationalDay: payload.operationalDay || getOperationalDayKey_(new Date()),
+    hoursBack: 0,
+    sinceShiftStart: true
+  });
+
+  var mail = sendReportEmail_(report, emails);
+  return {
+    ok: true,
+    action: "send_report",
+    packers: report.rows.length,
+    boxes: report.totalBoxes,
+    email: mail
+  };
+}
+
+/**
+ * Trigger automático cada 2 horas.
+ * Ejecutar UNA VEZ desde el editor: instalarTriggerReporte()
+ */
+function sendScheduledReport() {
+  var report = buildPackerReport_({
+    shiftStartedAt: "",
+    shiftName: "",
+    supervisor: "",
+    operationalDay: getOperationalDayKey_(new Date()),
+    hoursBack: 2,
+    sinceShiftStart: false
+  });
+  return sendReportEmail_(report, CONFIG.REPORT_EMAILS);
+}
+
+function instalarTriggerReporte() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var i;
+  for (i = 0; i < triggers.length; i += 1) {
+    if (triggers[i].getHandlerFunction() === "sendScheduledReport") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger("sendScheduledReport")
+    .timeBased()
+    .everyHours(2)
+    .create();
+  return "Trigger instalado: sendScheduledReport cada 2 horas.";
+}
+
+function buildPackerReport_(options) {
+  var sheet = ensureDetailedSheet_();
+  var lastRow = sheet.getLastRow();
+  var headers = HEADERS.detailed;
+  var map = {};
+  var totalBoxes = 0;
+  var cutoffMs = 0;
+  var shiftStartMs = 0;
+
+  if (options.hoursBack > 0) {
+    cutoffMs = new Date().getTime() - options.hoursBack * 60 * 60 * 1000;
+  }
+  if (options.sinceShiftStart && options.shiftStartedAt) {
+    try {
+      shiftStartMs = new Date(options.shiftStartedAt).getTime();
+    } catch (ignoreShift) {
+      shiftStartMs = 0;
+    }
+  }
+
+  if (lastRow >= 2) {
+    var values = sheet.getRange(2, 1, lastRow, headers.length).getValues();
+    var r;
+    for (r = 0; r < values.length; r += 1) {
+      var row = values[r];
+      var first = String(row[0] || "");
+      if (first.indexOf("CAMBIO DE TURNO") !== -1 || first.indexOf("CIERRE DE TURNO") !== -1) {
+        continue;
+      }
+      if (!String(row[2] || "").trim()) {
+        continue;
+      }
+
+      var tsMs = parseSheetTimestampMs_(row[1]);
+      if (cutoffMs && tsMs && tsMs < cutoffMs) {
+        continue;
+      }
+      if (shiftStartMs && tsMs && tsMs < shiftStartMs) {
+        continue;
+      }
+
+      var code = String(row[2] || "").trim().toUpperCase();
+      var name = String(row[3] || "").trim();
+      var count = Number(row[4]) || 0;
+      var assigned = Number(row[5]) || 0;
+      var tallones = Number(row[7]) || 0;
+      var malAcomodo = Number(row[8]) || 0;
+      var pudricion = Number(row[9]) || 0;
+      var malEnvuelto = Number(row[10]) || 0;
+      var colores = Number(row[11]) || 0;
+      var calibre = Number(row[12]) || 0;
+      var malPesadoText = String(row[13] || "").trim();
+      var malPesado = malPesadoText ? 1 : 0;
+      var hasDeviation = assigned > 0 || malPesado > 0;
+
+      if (!map[code]) {
+        map[code] = {
+          code: code,
+          name: name || code,
+          boxes: 0,
+          boxesWithDev: 0,
+          desv: 0,
+          countTotal: 0,
+          "Mal Acomodo": 0,
+          "Pudrición": 0,
+          "Mal Envuelto": 0,
+          "Tallones": 0,
+          "Colores Mixtos": 0,
+          "Calibre Revuelto": 0,
+          "Mal Pesado": 0
+        };
+      }
+
+      var item = map[code];
+      if (name) { item.name = name; }
+      item.boxes += 1;
+      item.countTotal += count;
+      item.desv += assigned;
+      item["Tallones"] += tallones;
+      item["Mal Acomodo"] += malAcomodo;
+      item["Pudrición"] += pudricion;
+      item["Mal Envuelto"] += malEnvuelto;
+      item["Colores Mixtos"] += colores;
+      item["Calibre Revuelto"] += calibre;
+      item["Mal Pesado"] += malPesado;
+      if (hasDeviation) {
+        item.boxesWithDev += 1;
+        totalBoxes += 1;
+      }
+    }
+  }
+
+  var rows = [];
+  Object.keys(map).sort().forEach(function (code) {
+    var item = map[code];
+    var pct = item.countTotal > 0 ? Math.round((item.desv / item.countTotal) * 100) : 0;
+    rows.push({
+      code: item.code,
+      name: item.name,
+      cajas: item.boxesWithDev,
+      desv: item.desv,
+      pctDesv: pct,
+      defects: {
+        "Mal Acomodo": item["Mal Acomodo"],
+        "Pudrición": item["Pudrición"],
+        "Mal Envuelto": item["Mal Envuelto"],
+        "Tallones": item["Tallones"],
+        "Colores Mixtos": item["Colores Mixtos"],
+        "Calibre Revuelto": item["Calibre Revuelto"],
+        "Mal Pesado": item["Mal Pesado"]
+      }
+    });
+  });
+
+  return {
+    generatedAt: formatTimestamp_(new Date().toISOString()),
+    operationalDay: options.operationalDay || "",
+    shiftName: options.shiftName || "",
+    supervisor: options.supervisor || "",
+    windowLabel: options.sinceShiftStart
+      ? ("Desde inicio de turno" + (options.shiftStartedAt ? " (" + formatTimestamp_(options.shiftStartedAt) + ")" : ""))
+      : ("Últimas " + (options.hoursBack || 2) + " horas"),
+    totalBoxes: totalBoxes,
+    rows: rows
+  };
+}
+
+function parseSheetTimestampMs_(value) {
+  if (!value) { return 0; }
+  if (value instanceof Date) { return value.getTime(); }
+  var raw = String(value).trim();
+  // dd/MM/yyyy HH:mm:ss
+  var m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (m) {
+    return new Date(
+      Number(m[3]),
+      Number(m[2]) - 1,
+      Number(m[1]),
+      Number(m[4] || 0),
+      Number(m[5] || 0),
+      Number(m[6] || 0)
+    ).getTime();
+  }
+  var parsed = new Date(raw);
+  return isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function sendReportEmail_(report, emails) {
+  var to = (emails && emails.length ? emails : CONFIG.REPORT_EMAILS).join(",");
+  var subject =
+    "SOAZ Reporte QC · " +
+    (report.shiftName || "Turno") + " · " +
+    (report.operationalDay || "") + " · " +
+    report.generatedAt;
+
+  var html = buildReportHtml_(report);
+  var result = { sent: false, detail: "" };
+  try {
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      htmlBody: html,
+      body: "Reporte SOAZ de inspección de calidad. Abrí este correo en un cliente que soporte HTML."
+    });
+    result.sent = true;
+    result.detail = "Email enviado a " + to;
+  } catch (mailError) {
+    result.detail = errText_(mailError);
+  }
+
+  // También deja una copia en hoja Reportes
+  try {
+    logReportRow_(report, to, result);
+  } catch (ignoreLog) {
+  }
+
+  return result;
+}
+
+function logReportRow_(report, emails, mailResult) {
+  var sheet = getOrCreateSheet_("Reportes", [
+    "Timestamp", "Día operativo", "Turno", "Supervisor", "Ventana", "Empacadores", "Cajas c/desv", "Emails", "Resultado"
+  ]);
+  sheet.appendRow([
+    report.generatedAt,
+    report.operationalDay,
+    report.shiftName,
+    report.supervisor,
+    report.windowLabel,
+    report.rows.length,
+    report.totalBoxes,
+    emails,
+    mailResult.sent ? "OK" : mailResult.detail
+  ]);
+}
+
+function buildReportHtml_(report) {
+  var rows = report.rows || [];
+  var i;
+  var summaryRows = "";
+  var defectRows = "";
+
+  for (i = 0; i < rows.length; i += 1) {
+    var r = rows[i];
+    summaryRows +=
+      "<tr>" +
+      "<td>" + esc_(r.code) + "</td>" +
+      "<td>" + esc_(r.name) + "</td>" +
+      "<td style='text-align:right;'>" + r.cajas + "</td>" +
+      "<td style='text-align:right;'>" + r.desv + "</td>" +
+      "<td style='text-align:right;'>" + r.pctDesv + "%</td>" +
+      "</tr>";
+
+    defectRows +=
+      "<tr>" +
+      "<td>" + esc_(r.code) + "</td>" +
+      "<td>" + esc_(r.name) + "</td>" +
+      "<td style='text-align:right;'>" + (r.desv || 0) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Acomodo"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Pudrición"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Envuelto"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Tallones"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Colores Mixtos"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Calibre Revuelto"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Pesado"]) + "</td>" +
+      "</tr>";
+  }
+
+  if (!rows.length) {
+    summaryRows = "<tr><td colspan='5'>Sin registros en la ventana del reporte.</td></tr>";
+    defectRows = "<tr><td colspan='10'>Sin registros en la ventana del reporte.</td></tr>";
+  }
+
+  return (
+    "<div style='font-family:Arial,sans-serif;color:#111;'>" +
+    "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
+    "<p style='margin:0 0 16px;color:#444;'>" +
+    "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
+    "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
+    "Turno: <b>" + esc_(report.shiftName || "—") + "</b><br>" +
+    "Supervisor: <b>" + esc_(report.supervisor || "—") + "</b><br>" +
+    "Ventana: <b>" + esc_(report.windowLabel) + "</b>" +
+    "</p>" +
+
+    "<h3 style='margin:18px 0 8px;'>Resumen por empacador</h3>" +
+    "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
+    "<tr style='background:#f3f4f6;'>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>DESV</th><th>%DESV</th>" +
+    "</tr>" +
+    summaryRows +
+    "</table>" +
+
+    "<h3 style='margin:22px 0 8px;'>Detalle por tipo de defecto</h3>" +
+    "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
+    "<tr style='background:#f3f4f6;'>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>DESV</th>" +
+    "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Tallones</th>" +
+    "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Mal Pesado</th>" +
+    "</tr>" +
+    defectRows +
+    "</table>" +
+
+    "<h3 style='margin:22px 0 8px;'>Leyenda</h3>" +
+    "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
+    "<tr style='background:#f3f4f6;'><th>Abreviatura</th><th>Significado</th></tr>" +
+    "<tr><td><b>CAJAS</b></td><td>Número total de cajas que presentan desviaciones / errores</td></tr>" +
+    "<tr><td><b>DESV</b></td><td>Cantidad de papayas que presentan un error</td></tr>" +
+    "<tr><td><b>%DESV</b></td><td>Porcentaje de desviación respecto Count (papayas con error / papayas totales del empacador)</td></tr>" +
+    "</table>" +
+    "</div>"
+  );
+}
+
+function fmtDef_(n) {
+  return Number(n) > 0 ? String(n) : "-";
+}
+
+function esc_(text) {
+  return String(text == null ? "" : text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 /* =========================================================================

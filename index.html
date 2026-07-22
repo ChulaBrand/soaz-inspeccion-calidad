@@ -738,6 +738,14 @@
             <input class="field-input" id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
           </div>
 
+          <div class="field-group">
+            <div class="field-label">Turno</div>
+            <div class="search-mode" id="shiftSelectGroup" style="padding:12px;background:var(--bg-elevated);border:2px solid var(--border);border-radius:var(--radius-sm);">
+              <label><input type="radio" name="shiftSelect" value="Primer turno" checked> Primer turno</label>
+              <label><input type="radio" name="shiftSelect" value="Segundo turno"> Segundo turno</label>
+            </div>
+          </div>
+
           <label class="toggle-row" for="detailedModeToggle">
             <span class="toggle-row-text">
               <span class="toggle-row-title">Detailed Mode</span>
@@ -845,6 +853,9 @@
           <p class="panel-desc">Selecciona la cantidad total de papayas en la caja auditada.</p>
         </div>
         <div class="count-grid" id="countGrid"></div>
+        <div class="toolbar-row" style="margin-top:16px;">
+          <button class="btn btn-secondary btn-block" type="button" id="btnSendReport">Enviar reporte</button>
+        </div>
         <div class="footer-bar">
           <button class="btn-close-shift" type="button" id="btnCloseShiftDetailed">Cerrar Turno</button>
         </div>
@@ -948,7 +959,8 @@
 
       var CONFIG = {
         apiBaseUrl: "https://script.google.com/macros/s/AKfycbxt1K5k05Qh82J_0D5yE3D7T77z6Iilo4fZXLT4QkOVWBG4QNgc8Z5585C0JUjXch6Y/exec",
-        alertEmails: ["calidad@soaz.com", "supervision@soaz.com"],
+        alertEmails: ["antoniozm007@gmail.com"],
+        reportEmails: ["antoniozm007@gmail.com"],
         operationalDayStartHour: 16,
         storageKeys: {
           packers: "soaz_packer_catalog_v2",
@@ -988,6 +1000,7 @@
       var state = {
         token: "",
         supervisor: "",
+        shiftName: "Primer turno",
         detailedMode: true,
         shiftStartedAt: null,
         operationalDay: "",
@@ -1003,6 +1016,7 @@
         pendingQueue: [],
         isSyncing: false,
         isRegistering: false,
+        isSendingReport: false,
         packerSearchQuery: "",
         packerSearchMode: "both",
         packerSelectSearchQuery: "",
@@ -1068,7 +1082,9 @@
       }
 
       function updateHeader() {
-        dom.supervisorDisplay.textContent = state.supervisor || "Sin supervisor";
+        dom.supervisorDisplay.textContent = state.supervisor
+          ? (state.supervisor + (state.shiftName ? " · " + state.shiftName : ""))
+          : "Sin supervisor";
         dom.operationalDayDisplay.textContent = "Día operativo " + (state.operationalDay ? formatDisplayDate(state.operationalDay) : "—");
         if (state.token) {
           dom.modeTag.style.display = "inline-block";
@@ -1155,6 +1171,7 @@
         saveJson(CONFIG.storageKeys.shiftDraft, {
           token: state.token,
           supervisor: state.supervisor,
+          shiftName: state.shiftName,
           detailedMode: state.detailedMode,
           shiftStartedAt: state.shiftStartedAt,
           operationalDay: state.operationalDay,
@@ -1172,6 +1189,7 @@
         if (!draft || !draft.supervisor || !draft.token) { return false; }
         state.token = draft.token;
         state.supervisor = draft.supervisor;
+        state.shiftName = draft.shiftName || "Primer turno";
         state.detailedMode = draft.detailedMode !== false;
         state.shiftStartedAt = draft.shiftStartedAt;
         state.operationalDay = draft.operationalDay;
@@ -1187,6 +1205,7 @@
       function resetShiftState() {
         state.token = "";
         state.supervisor = "";
+        state.shiftName = "Primer turno";
         state.detailedMode = true;
         state.shiftStartedAt = null;
         state.operationalDay = "";
@@ -1198,6 +1217,7 @@
         state.flowStack = [];
         state.currentAudit = null;
         state.isRegistering = false;
+        state.isSendingReport = false;
         state.shiftMarkerSent = false;
         state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         localStorage.removeItem(CONFIG.storageKeys.shiftDraft);
@@ -2196,6 +2216,7 @@
         apiRequest({ action: "authenticate", supervisor: name, password: password }).then(function (data) {
           state.token = data.token;
           state.supervisor = data.supervisor || name;
+          state.shiftName = getSelectedSearchMode("shiftSelect") || "Primer turno";
           state.detailedMode = dom.detailedModeToggle.checked;
           state.shiftStartedAt = nowIso();
           state.operationalDay = getOperationalDay(new Date());
@@ -2214,7 +2235,7 @@
           showScreen("screenPackers");
           renderPackerManageList();
           refreshPackersFromCloud(true);
-          showToast("Sesión iniciada. Modo " + (state.detailedMode ? "detallado" : "simple") + ".", "success");
+          showToast("Sesión iniciada · " + state.shiftName + " · Modo " + (state.detailedMode ? "detallado" : "simple") + ".", "success");
         }).catch(function (error) {
           showToast(error.message || "No se pudo iniciar sesión", "error");
         }).finally(function () {
@@ -2240,8 +2261,10 @@
             operationalDay: state.operationalDay,
             shiftStartedAt: state.shiftStartedAt,
             supervisor: state.supervisor,
+            shiftName: state.shiftName,
             mode: state.detailedMode ? "detailed" : "simple",
-            activePackerCount: getActivePackers().length
+            activePackerCount: getActivePackers().length,
+            activePackerCodes: state.activePackerCodes.slice()
           }).then(function () {
             state.shiftMarkerSent = true;
             saveShiftDraft();
@@ -2249,6 +2272,40 @@
             showToast("Turno abierto localmente. No se pudo marcar en Sheets.", "info");
           });
         }
+      }
+
+      function handleSendReport() {
+        if (state.isSendingReport) { return; }
+        if (!state.token) {
+          showToast("Inicia sesión para enviar el reporte.", "error");
+          return;
+        }
+        state.isSendingReport = true;
+        if (dom.btnSendReport) {
+          dom.btnSendReport.disabled = true;
+          dom.btnSendReport.textContent = "Enviando reporte...";
+        }
+        apiRequest({
+          action: "send_report",
+          timestamp: nowIso(),
+          operationalDay: state.operationalDay,
+          shiftStartedAt: state.shiftStartedAt,
+          supervisor: state.supervisor,
+          shiftName: state.shiftName,
+          mode: state.detailedMode ? "detailed" : "simple",
+          emails: CONFIG.reportEmails
+        }).then(function (data) {
+          showToast("Reporte enviado a " + CONFIG.reportEmails.join(", ") +
+            (data.packers != null ? (" (" + data.packers + " empacadores)") : "") + ".", "success");
+        }).catch(function (error) {
+          showToast(error.message || "No se pudo enviar el reporte", "error");
+        }).finally(function () {
+          state.isSendingReport = false;
+          if (dom.btnSendReport) {
+            dom.btnSendReport.disabled = false;
+            dom.btnSendReport.textContent = "Enviar reporte";
+          }
+        });
       }
 
       function toggleAddPackerForm(show) {
@@ -2349,6 +2406,9 @@
 
         dom.btnCloseShiftSimple.addEventListener("click", handleCloseShift);
         dom.btnCloseShiftDetailed.addEventListener("click", handleCloseShift);
+        if (dom.btnSendReport) {
+          dom.btnSendReport.addEventListener("click", handleSendReport);
+        }
         dom.btnCancelCloseShift.addEventListener("click", function () { dom.modalCloseShift.classList.remove("open"); });
         dom.btnConfirmCloseShift.addEventListener("click", confirmCloseShift);
 
@@ -2452,6 +2512,7 @@
         dom.defectButtons = byId("defectButtons");
         dom.btnCloseShiftSimple = byId("btnCloseShiftSimple");
         dom.btnCloseShiftDetailed = byId("btnCloseShiftDetailed");
+        dom.btnSendReport = byId("btnSendReport");
         dom.flowStepLabel = byId("flowStepLabel");
         dom.flowTitle = byId("flowTitle");
         dom.flowDescription = byId("flowDescription");
@@ -2504,6 +2565,7 @@
         updateSyncBanner();
 
         if (loadShiftDraft()) {
+          setSearchModeRadios("shiftSelect", state.shiftName || "Primer turno");
           updateHeader();
           renderPackerManageList();
           refreshPackersFromCloud(false).catch(function () {});
