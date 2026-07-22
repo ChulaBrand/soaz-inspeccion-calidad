@@ -93,7 +93,7 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-cols-v8",
+        version: "report-v9",
         message: "API activa. Formato detallado + reportes cada 2 horas."
       };
     }
@@ -672,7 +672,7 @@ function handleCloseShift_(payload) {
 /* =========================================================================
  *  REPORTE CADA 2 HORAS / MANUAL
  *  CAJAS = cajas con desviación
- *  DESV  = papayas con error
+ *  DESV  = papayas con error + Mal Pesado (1 por caja)
  *  %DESV = DESV / Count total * 100
  * ========================================================================= */
 
@@ -688,13 +688,16 @@ var REPORT_DEFECT_COLS = [
 
 function handleSendReport_(payload) {
   var emails = resolveReportEmails_(payload.emails);
+  // Acumulado del turno abierto (historial desde CAMBIO DE TURNO).
+  var active = findActiveDetailedShift_();
   var report = buildPackerReport_({
-    shiftStartedAt: payload.shiftStartedAt || "",
-    shiftName: payload.shiftName || "",
-    supervisor: payload.supervisor || payload._supervisorFromToken || "",
-    operationalDay: payload.operationalDay || getOperationalDayKey_(new Date()),
+    shiftStartedAt: payload.shiftStartedAt || active.shiftStartedAtIso || "",
+    shiftName: payload.shiftName || active.shiftName || "",
+    supervisor: payload.supervisor || payload._supervisorFromToken || active.supervisor || "",
+    operationalDay: payload.operationalDay || active.operationalDay || getOperationalDayKey_(new Date()),
     hoursBack: 0,
-    sinceShiftStart: true
+    sinceShiftStart: true,
+    sinceRow: active.active ? (active.startRow || 0) : 0
   });
 
   if (!report.rows.length || report.totalAudits < 1) {
@@ -961,7 +964,8 @@ function buildPackerReport_(options) {
       item.boxes += 1;
       totalAudits += 1;
       item.countTotal += count;
-      item.desv += assigned;
+      // DESV = papayas con defecto + Mal Pesado (vale 1 por caja).
+      item.desv += assigned + malPesado;
       item["Tallones"] += tallones;
       item["Mal Acomodo"] += malAcomodo;
       item["Pudrición"] += pudricion;
@@ -977,7 +981,7 @@ function buildPackerReport_(options) {
   }
 
   var rows = [];
-  Object.keys(map).sort().forEach(function (code) {
+  Object.keys(map).forEach(function (code) {
     var item = map[code];
     var pct = item.countTotal > 0 ? Math.round((item.desv / item.countTotal) * 100) : 0;
     var countAvg = item.boxes > 0 ? Math.round(item.countTotal / item.boxes) : 0;
@@ -1006,9 +1010,8 @@ function buildPackerReport_(options) {
     operationalDay: options.operationalDay || "",
     shiftName: options.shiftName || "",
     supervisor: options.supervisor || "",
-    windowLabel: options.sinceShiftStart || options.sinceRow
-      ? ("Desde inicio de turno" + (options.shiftStartedAt ? " (" + formatTimestamp_(options.shiftStartedAt) + ")" : ""))
-      : ("Últimas " + (options.hoursBack || 2) + " horas"),
+    windowLabel: "Acumulado desde inicio de turno" +
+      (options.shiftStartedAt ? " (" + formatTimestamp_(options.shiftStartedAt) + ")" : ""),
     totalBoxes: totalBoxes,
     totalAudits: totalAudits,
     rows: rows
@@ -1086,12 +1089,17 @@ function logReportRow_(report, emails, mailResult) {
 
 function buildReportHtml_(report) {
   var rows = report.rows || [];
-  var i;
+  var byCajas = sortReportRows_(rows, "cajas");
+  var byDesv = sortReportRows_(rows, "desv");
+
+  var cajasRows = buildSimpleMetricRows_(byCajas, "cajas");
+  var desvRows = buildSimpleMetricRows_(byDesv, "desv");
   var summaryRows = "";
   var defectRows = "";
+  var i;
 
-  for (i = 0; i < rows.length; i += 1) {
-    var r = rows[i];
+  for (i = 0; i < byDesv.length; i += 1) {
+    var r = byDesv[i];
     summaryRows +=
       "<tr>" +
       "<td>" + esc_(r.code) + "</td>" +
@@ -1119,14 +1127,16 @@ function buildReportHtml_(report) {
   }
 
   if (!rows.length) {
-    summaryRows = "<tr><td colspan='5'>Sin registros en la ventana del reporte.</td></tr>";
-    defectRows = "<tr><td colspan='12'>Sin registros en la ventana del reporte.</td></tr>";
+    cajasRows = "<tr><td colspan='3'>Sin registros en el turno.</td></tr>";
+    desvRows = "<tr><td colspan='3'>Sin registros en el turno.</td></tr>";
+    summaryRows = "<tr><td colspan='5'>Sin registros en el turno.</td></tr>";
+    defectRows = "<tr><td colspan='12'>Sin registros en el turno.</td></tr>";
   }
 
   return (
     "<div style='font-family:Arial,sans-serif;color:#111;'>" +
     "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
-    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-cols-v8</p>" +
+    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v9 · Acumulado del turno</p>" +
     "<p style='margin:0 0 16px;color:#444;'>" +
     "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
     "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
@@ -1135,12 +1145,28 @@ function buildReportHtml_(report) {
     "Ventana: <b>" + esc_(report.windowLabel) + "</b>" +
     "</p>" +
 
-    "<h3 style='margin:18px 0 8px;'>Resumen por empacador</h3>" +
+    "<h3 style='margin:18px 0 8px;'>Cajas con desviación (mayor a menor)</h3>" +
+    "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
+    "<tr style='background:#f3f4f6;'>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th>" +
+    "</tr>" +
+    cajasRows +
+    "</table>" +
+
+    "<h3 style='margin:22px 0 8px;'>Resumen por empacador</h3>" +
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
     "<th>CODIGO</th><th>NOMBRE</th><th>COUNT T.</th><th>DESV</th><th>%DESV</th>" +
     "</tr>" +
     summaryRows +
+    "</table>" +
+
+    "<h3 style='margin:22px 0 8px;'>Cantidad de desviaciones (mayor a menor)</h3>" +
+    "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
+    "<tr style='background:#f3f4f6;'>" +
+    "<th>CODIGO</th><th>NOMBRE</th><th>DESV</th>" +
+    "</tr>" +
+    desvRows +
     "</table>" +
 
     "<h3 style='margin:22px 0 8px;'>Detalle por tipo de defecto</h3>" +
@@ -1158,11 +1184,34 @@ function buildReportHtml_(report) {
     "<tr style='background:#f3f4f6;'><th>Abreviatura</th><th>Significado</th></tr>" +
     "<tr><td><b>CAJAS</b></td><td>Número total de cajas que presentan desviaciones / errores</td></tr>" +
     "<tr><td><b>COUNT T.</b></td><td>Cantidad de papayas totales que inspeccionó el empacador</td></tr>" +
-    "<tr><td><b>DESV</b></td><td>Cantidad de papayas que presentan un error</td></tr>" +
-    "<tr><td><b>%DESV</b></td><td>Porcentaje de desviación respecto Count (papayas con error / papayas totales del empacador)</td></tr>" +
+    "<tr><td><b>DESV</b></td><td>Cantidad de papayas con error + Mal Pesado (vale 1 por caja)</td></tr>" +
+    "<tr><td><b>%DESV</b></td><td>Porcentaje de desviación (DESV / COUNT T.)</td></tr>" +
     "</table>" +
     "</div>"
   );
+}
+
+function sortReportRows_(rows, key) {
+  return (rows || []).slice().sort(function (a, b) {
+    var diff = (Number(b[key]) || 0) - (Number(a[key]) || 0);
+    if (diff !== 0) { return diff; }
+    return String(a.code || "").localeCompare(String(b.code || ""));
+  });
+}
+
+function buildSimpleMetricRows_(rows, key) {
+  var html = "";
+  var i;
+  for (i = 0; i < rows.length; i += 1) {
+    var r = rows[i];
+    html +=
+      "<tr>" +
+      "<td>" + esc_(r.code) + "</td>" +
+      "<td>" + esc_(r.name) + "</td>" +
+      "<td style='text-align:right;'>" + (Number(r[key]) || 0) + "</td>" +
+      "</tr>";
+  }
+  return html;
 }
 
 function fmtDef_(n) {
