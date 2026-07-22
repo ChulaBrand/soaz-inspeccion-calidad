@@ -38,6 +38,7 @@ var CONFIG = {
   // Nombres de hojas.
   SHEET_SIMPLE: "Inspecciones Simples",
   SHEET_DETAILED: "Inspecciones Detalladas",
+  SHEET_DETAILED_RAW: "Inspecciones Bruto",
   SHEET_PACKERS: "Empacadores",
   SHEET_ALERTS: "Alertas",
   SHEET_LOG: "Log",
@@ -68,6 +69,25 @@ var HEADERS = {
     "Calibre Revuelto",
     "Mal Pesado"
   ],
+  // Misma info de cajas, sin marcadores de turno; Turno y Supervisor en columnas.
+  detailedRaw: [
+    "Audit ID",
+    "Timestamp",
+    "Código empacador",
+    "Nombre empacador",
+    "Count",
+    "Papayas con defecto",
+    "Papayas buenas",
+    "Tallones",
+    "Mal Acomodo",
+    "Pudrición",
+    "Mal Envuelto",
+    "Colores Mixtos",
+    "Calibre Revuelto",
+    "Mal Pesado",
+    "Turno",
+    "Supervisor"
+  ],
   packers: ["Código", "Nombre", "Activo"],
   alerts: [
     "Timestamp", "Día operativo", "Supervisor", "Código empacador",
@@ -93,8 +113,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v10",
-        message: "API activa. Reportes v10: tablas CAJAS/DESV + acumulado turno."
+        version: "report-v11",
+        message: "API activa. Reportes v11: tipos de desviación + hoja Inspecciones Bruto."
       };
     }
     return respond_(e, result);
@@ -382,9 +402,10 @@ function handleRegisterDetailed_(payload) {
   var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
   var qtyByDefect = aggregateDetailedQtys_(payload.rows || []);
   var malPesado = qtyByDefect.malPesadoText || "";
+  var supervisor = payload.supervisor || payload._supervisorFromToken || "";
+  var shiftName = payload.shiftName || "";
 
-  // 1 sola fila por caja. Cada defecto en su columna.
-  sheet.appendRow([
+  var dataRow = [
     payload.auditId || "",
     formatTimestamp_(payload.timestamp),
     payload.packerCode || "",
@@ -399,7 +420,13 @@ function handleRegisterDetailed_(payload) {
     qtyByDefect["Colores Mixtos"] || 0,
     qtyByDefect["Calibre Revuelto"] || 0,
     malPesado
-  ]);
+  ];
+
+  // 1 sola fila por caja. Cada defecto en su columna.
+  sheet.appendRow(dataRow);
+
+  // Hoja bruta: mismos datos + Turno + Supervisor (sin marcadores).
+  appendDetailedRawRow_(dataRow, shiftName, supervisor);
 
   bumpSummary_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
 
@@ -520,6 +547,92 @@ function writeDetailedHeader_(sheet) {
   sheet.appendRow(HEADERS.detailed);
   sheet.getRange(1, 1, 1, HEADERS.detailed.length).setFontWeight("bold");
   sheet.setFrozenRows(1);
+}
+
+function ensureDetailedRawSheet_() {
+  var ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName(CONFIG.SHEET_DETAILED_RAW);
+  var headers = HEADERS.detailedRaw;
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEET_DETAILED_RAW);
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function appendDetailedRawRow_(dataRow, shiftName, supervisor) {
+  var sheet = ensureDetailedRawSheet_();
+  var row = (dataRow || []).slice();
+  row.push(shiftName || "");
+  row.push(supervisor || "");
+  sheet.appendRow(row);
+}
+
+/**
+ * Ejecutar UNA VEZ desde el editor para llenar "Inspecciones Bruto"
+ * con el historial ya existente en "Inspecciones Detalladas".
+ */
+function migrarInspeccionesBruto() {
+  var src = ensureDetailedSheet_();
+  var dest = ensureDetailedRawSheet_();
+  var lastRow = src.getLastRow();
+  if (lastRow < 2) {
+    return "No hay filas para migrar.";
+  }
+
+  // Limpia datos previos de bruto (conserva encabezado).
+  if (dest.getLastRow() > 1) {
+    dest.deleteRows(2, dest.getLastRow() - 1);
+  }
+
+  var width = HEADERS.detailed.length;
+  var values = src.getRange(2, 1, lastRow, width).getValues();
+  var out = [];
+  var currentShift = "";
+  var currentSupervisor = "";
+  var i;
+
+  for (i = 0; i < values.length; i += 1) {
+    var row = values[i];
+    var first = String(row[0] || "");
+    if (first.indexOf("CAMBIO DE TURNO") !== -1) {
+      currentSupervisor = String(row[1] || "").replace(/^Supervisor:\s*/i, "").trim();
+      currentShift = String(row[5] || "").replace(/^Turno:\s*/i, "").trim();
+      continue;
+    }
+    if (first.indexOf("CIERRE DE TURNO") !== -1) {
+      continue;
+    }
+    if (!String(row[2] || "").trim()) {
+      continue;
+    }
+
+    var rawRow = [];
+    var c;
+    for (c = 0; c < width; c += 1) {
+      rawRow.push(row[c]);
+    }
+    // Timestamp formateado si viene como Date
+    if (rawRow[1] instanceof Date) {
+      rawRow[1] = formatTimestamp_(rawRow[1].toISOString());
+    }
+    rawRow.push(currentShift);
+    rawRow.push(currentSupervisor);
+    out.push(rawRow);
+  }
+
+  if (out.length) {
+    dest.getRange(2, 1, out.length, HEADERS.detailedRaw.length).setValues(out);
+  }
+  return "Migradas " + out.length + " filas a " + CONFIG.SHEET_DETAILED_RAW + ".";
 }
 
 /* =========================================================================
@@ -981,6 +1094,16 @@ function buildPackerReport_(options) {
   }
 
   var rows = [];
+  var defectTotalsMap = {
+    "Mal Acomodo": 0,
+    "Pudrición": 0,
+    "Mal Envuelto": 0,
+    "Tallones": 0,
+    "Colores Mixtos": 0,
+    "Calibre Revuelto": 0,
+    "Mal Pesado": 0
+  };
+
   Object.keys(map).forEach(function (code) {
     var item = map[code];
     var pct = item.countTotal > 0 ? Math.round((item.desv / item.countTotal) * 100) : 0;
@@ -1003,6 +1126,23 @@ function buildPackerReport_(options) {
         "Mal Pesado": item["Mal Pesado"]
       }
     });
+    defectTotalsMap["Mal Acomodo"] += item["Mal Acomodo"];
+    defectTotalsMap["Pudrición"] += item["Pudrición"];
+    defectTotalsMap["Mal Envuelto"] += item["Mal Envuelto"];
+    defectTotalsMap["Tallones"] += item["Tallones"];
+    defectTotalsMap["Colores Mixtos"] += item["Colores Mixtos"];
+    defectTotalsMap["Calibre Revuelto"] += item["Calibre Revuelto"];
+    defectTotalsMap["Mal Pesado"] += item["Mal Pesado"];
+  });
+
+  var defectTotals = [];
+  Object.keys(defectTotalsMap).forEach(function (name) {
+    defectTotals.push({ name: name, cantidad: defectTotalsMap[name] });
+  });
+  defectTotals.sort(function (a, b) {
+    var diff = (Number(b.cantidad) || 0) - (Number(a.cantidad) || 0);
+    if (diff !== 0) { return diff; }
+    return String(a.name).localeCompare(String(b.name));
   });
 
   return {
@@ -1014,7 +1154,8 @@ function buildPackerReport_(options) {
       (options.shiftStartedAt ? " (" + formatTimestamp_(options.shiftStartedAt) + ")" : ""),
     totalBoxes: totalBoxes,
     totalAudits: totalAudits,
-    rows: rows
+    rows: rows,
+    defectTotals: defectTotals
   };
 }
 
@@ -1091,12 +1232,22 @@ function buildReportHtml_(report) {
   var rows = report.rows || [];
   var byCajas = sortReportRows_(rows, "cajas");
   var byDesv = sortReportRows_(rows, "desv");
+  var defectTotals = report.defectTotals || [];
 
   var cajasRows = buildSimpleMetricRows_(byCajas, "cajas");
-  var desvRows = buildSimpleMetricRows_(byDesv, "desv");
+  var defectTypeRows = "";
   var summaryRows = "";
   var defectRows = "";
   var i;
+
+  for (i = 0; i < defectTotals.length; i += 1) {
+    var d = defectTotals[i];
+    defectTypeRows +=
+      "<tr>" +
+      "<td>" + esc_(d.name) + "</td>" +
+      "<td style='text-align:right;'>" + (Number(d.cantidad) || 0) + "</td>" +
+      "</tr>";
+  }
 
   for (i = 0; i < byDesv.length; i += 1) {
     var r = byDesv[i];
@@ -1128,7 +1279,7 @@ function buildReportHtml_(report) {
 
   if (!rows.length) {
     cajasRows = "<tr><td colspan='3'>Sin registros en el turno.</td></tr>";
-    desvRows = "<tr><td colspan='3'>Sin registros en el turno.</td></tr>";
+    defectTypeRows = "<tr><td colspan='2'>Sin registros en el turno.</td></tr>";
     summaryRows = "<tr><td colspan='5'>Sin registros en el turno.</td></tr>";
     defectRows = "<tr><td colspan='12'>Sin registros en el turno.</td></tr>";
   }
@@ -1136,7 +1287,7 @@ function buildReportHtml_(report) {
   return (
     "<div style='font-family:Arial,sans-serif;color:#111;'>" +
     "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
-    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v10 · Acumulado del turno</p>" +
+    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v11 · Acumulado del turno</p>" +
     "<p style='margin:0 0 16px;color:#444;'>" +
     "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
     "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
@@ -1161,12 +1312,12 @@ function buildReportHtml_(report) {
     summaryRows +
     "</table>" +
 
-    "<h3 style='margin:22px 0 8px;'>Cantidad de desviaciones (mayor a menor)</h3>" +
+    "<h3 style='margin:22px 0 8px;'>Cantidad de desviaciones por tipo (mayor a menor)</h3>" +
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
-    "<th>CODIGO</th><th>NOMBRE</th><th>DESV</th>" +
+    "<th>NOMBRE</th><th>CANTIDAD</th>" +
     "</tr>" +
-    desvRows +
+    defectTypeRows +
     "</table>" +
 
     "<h3 style='margin:22px 0 8px;'>Detalle por tipo de defecto</h3>" +
@@ -1186,6 +1337,7 @@ function buildReportHtml_(report) {
     "<tr><td><b>COUNT T.</b></td><td>Cantidad de papayas totales que inspeccionó el empacador</td></tr>" +
     "<tr><td><b>DESV</b></td><td>Cantidad de papayas con error + Mal Pesado (vale 1 por caja)</td></tr>" +
     "<tr><td><b>%DESV</b></td><td>Porcentaje de desviación (DESV / COUNT T.)</td></tr>" +
+    "<tr><td><b>CANTIDAD</b></td><td>Total de ocurrencias de cada tipo de desviación en el turno</td></tr>" +
     "</table>" +
     "</div>"
   );
