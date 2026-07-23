@@ -61,7 +61,7 @@ var HEADERS = {
     "Count",
     "Papayas con defecto",
     "Papayas buenas",
-    "Tallones",
+    "Golpe",
     "Mal Acomodo",
     "Pudrición",
     "Mal Envuelto",
@@ -78,7 +78,7 @@ var HEADERS = {
     "Count",
     "Papayas con defecto",
     "Papayas buenas",
-    "Tallones",
+    "Golpe",
     "Mal Acomodo",
     "Pudrición",
     "Mal Envuelto",
@@ -113,8 +113,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v12",
-        message: "API activa. Reportes v12: envío automático al cerrar turno."
+        version: "report-v13",
+        message: "API activa. Reportes v13: Tallones renombrado a Golpe."
       };
     }
     return respond_(e, result);
@@ -413,7 +413,7 @@ function handleRegisterDetailed_(payload) {
     payload.count != null ? payload.count : "",
     payload.assigned != null ? payload.assigned : 0,
     payload.buenas != null ? payload.buenas : "",
-    qtyByDefect["Tallones"] || 0,
+    qtyByDefect["Golpe"] || 0,
     qtyByDefect["Mal Acomodo"] || 0,
     qtyByDefect["Pudrición"] || 0,
     qtyByDefect["Mal Envuelto"] || 0,
@@ -440,7 +440,7 @@ function handleRegisterDetailed_(payload) {
 function aggregateDetailedQtys_(rows) {
   var map = {
     "Pudrición": 0,
-    "Tallones": 0,
+    "Golpe": 0,
     "Calibre Revuelto": 0,
     "Colores Mixtos": 0,
     "Mal Acomodo": 0,
@@ -847,7 +847,7 @@ var REPORT_DEFECT_COLS = [
   "Mal Acomodo",
   "Pudrición",
   "Mal Envuelto",
-  "Tallones",
+  "Golpe",
   "Colores Mixtos",
   "Calibre Revuelto",
   "Mal Pesado"
@@ -1119,7 +1119,7 @@ function buildPackerReport_(options) {
           "Mal Acomodo": 0,
           "Pudrición": 0,
           "Mal Envuelto": 0,
-          "Tallones": 0,
+          "Golpe": 0,
           "Colores Mixtos": 0,
           "Calibre Revuelto": 0,
           "Mal Pesado": 0
@@ -1133,7 +1133,7 @@ function buildPackerReport_(options) {
       item.countTotal += count;
       // DESV = papayas con defecto + Mal Pesado (vale 1 por caja).
       item.desv += assigned + malPesado;
-      item["Tallones"] += tallones;
+      item["Golpe"] += tallones;
       item["Mal Acomodo"] += malAcomodo;
       item["Pudrición"] += pudricion;
       item["Mal Envuelto"] += malEnvuelto;
@@ -1152,7 +1152,7 @@ function buildPackerReport_(options) {
     "Mal Acomodo": 0,
     "Pudrición": 0,
     "Mal Envuelto": 0,
-    "Tallones": 0,
+    "Golpe": 0,
     "Colores Mixtos": 0,
     "Calibre Revuelto": 0,
     "Mal Pesado": 0
@@ -1174,7 +1174,7 @@ function buildPackerReport_(options) {
         "Mal Acomodo": item["Mal Acomodo"],
         "Pudrición": item["Pudrición"],
         "Mal Envuelto": item["Mal Envuelto"],
-        "Tallones": item["Tallones"],
+        "Golpe": item["Golpe"],
         "Colores Mixtos": item["Colores Mixtos"],
         "Calibre Revuelto": item["Calibre Revuelto"],
         "Mal Pesado": item["Mal Pesado"]
@@ -1183,7 +1183,7 @@ function buildPackerReport_(options) {
     defectTotalsMap["Mal Acomodo"] += item["Mal Acomodo"];
     defectTotalsMap["Pudrición"] += item["Pudrición"];
     defectTotalsMap["Mal Envuelto"] += item["Mal Envuelto"];
-    defectTotalsMap["Tallones"] += item["Tallones"];
+    defectTotalsMap["Golpe"] += item["Golpe"];
     defectTotalsMap["Colores Mixtos"] += item["Colores Mixtos"];
     defectTotalsMap["Calibre Revuelto"] += item["Calibre Revuelto"];
     defectTotalsMap["Mal Pesado"] += item["Mal Pesado"];
@@ -1324,7 +1324,7 @@ function buildReportHtml_(report) {
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Acomodo"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Pudrición"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Envuelto"]) + "</td>" +
-      "<td style='text-align:right;'>" + fmtDef_(r.defects["Tallones"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Golpe"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Colores Mixtos"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Calibre Revuelto"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Pesado"]) + "</td>" +
@@ -1341,7 +1341,7 @@ function buildReportHtml_(report) {
   return (
     "<div style='font-family:Arial,sans-serif;color:#111;'>" +
     "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
-    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v11 · Acumulado del turno</p>" +
+    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v13 · Acumulado del turno</p>" +
     "<p style='margin:0 0 16px;color:#444;'>" +
     "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
     "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
@@ -1378,7 +1378,7 @@ function buildReportHtml_(report) {
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
     "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>COUNT T.</th><th>DESV</th>" +
-    "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Tallones</th>" +
+    "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Golpe</th>" +
     "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Mal Pesado</th>" +
     "</tr>" +
     defectRows +

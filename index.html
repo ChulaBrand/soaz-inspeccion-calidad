@@ -1068,7 +1068,7 @@
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbxCMqpqeSySFm7_ybYsnr-QHqdHbSkyuHRbnLV5z6yzHUa1njLB5GlxYEoHebKx8P_d/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbwMVCIqamliT6ypF-JNaGcxfOdW6hvdWjPqe-yDYeuC_9qgNj8_nHPW8qCNYHK_gBXr/exec",
         reportEmails: ["antoniozm007@gmail.com"],
         operationalDayStartHour: 16,
         storageKeys: {
@@ -1085,7 +1085,7 @@
       var SIMPLE_DEFECTS = [
         { id: "mal_pesado", label: "Mal Pesado", hint: "Peso ↑ / Peso ↓ / Skip", critical: false },
         { id: "pudricion", label: "Pudrición", hint: "Fruta en deterioro", critical: false },
-        { id: "tallones", label: "Tallones", hint: "Daño por tallo", critical: false },
+        { id: "tallones", label: "Golpe", hint: "Daño por golpe", critical: false },
         { id: "calibre_revuelto", label: "Calibre Revuelto", hint: "Predominante y mezclado", critical: false },
         { id: "colores_mixtos", label: "Colores Mixtos", hint: "Predominante y mezclado", critical: false },
         { id: "mal_acomodo", label: "Mal Acomodo", hint: "Acomodo deficiente", critical: true },
@@ -1096,7 +1096,7 @@
       // Calibre Revuelto y Colores Mixtos son simples: solo se elige la cantidad.
       var DETAILED_DEFECTS = [
         { id: "pudricion", label: "Pudrición", type: "qty" },
-        { id: "tallones", label: "Tallones", type: "qty" },
+        { id: "tallones", label: "Golpe", type: "qty" },
         { id: "calibre_revuelto", label: "Calibre Revuelto", type: "qty" },
         { id: "colores_mixtos", label: "Colores Mixtos", type: "qty" },
         { id: "mal_acomodo", label: "Mal Acomodo", type: "qty" },
