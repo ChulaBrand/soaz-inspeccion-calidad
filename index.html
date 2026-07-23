@@ -219,6 +219,15 @@
       font-size: 1.05rem;
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
+    select.field-input {
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+        linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+      background-position: calc(100% - 20px) calc(50% - 3px), calc(100% - 14px) calc(50% - 3px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+      padding-right: 40px;
+    }
 
     .field-input:focus {
       outline: none;
@@ -795,11 +804,19 @@
     <main id="screenLogin" class="screen active">
       <section class="panel">
         <h1 class="panel-title">Inicio de Turno</h1>
-        <p class="panel-desc">Ingresa el supervisor y la contraseña del turno. El acceso se valida en el servidor.</p>
+        <p class="panel-desc">Selecciona Calidad, Supervisor y la contraseña del turno. El acceso se valida en el servidor.</p>
         <form id="loginForm" method="post" action="#">
           <div class="field-group">
-            <label class="field-label" for="supervisorName">Nombre del Supervisor</label>
-            <input class="field-input" id="supervisorName" name="supervisorName" type="text" autocomplete="name" placeholder="Ej. María González" required>
+            <label class="field-label" for="calidadSelect">* Calidad</label>
+            <select class="field-input" id="calidadSelect" name="calidadSelect" required>
+              <option value="">Selecciona...</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="supervisorName">* Supervisor</label>
+            <select class="field-input" id="supervisorName" name="supervisorName" required>
+              <option value="">Selecciona...</option>
+            </select>
           </div>
           <div class="field-group">
             <label class="field-label" for="password">Contraseña</label>
@@ -987,6 +1004,8 @@
   <div class="gear-menu" id="gearMenu" role="menu">
     <button type="button" id="menuSendReport" role="menuitem">Enviar reporte</button>
     <button type="button" id="menuManageEmails" role="menuitem">Agregar correos (reporte y alertas)</button>
+    <button type="button" id="menuManageCalidad" role="menuitem">Administrar nombres de Calidad</button>
+    <button type="button" id="menuManageSupervisor" role="menuitem">Administrar nombres de Supervisor</button>
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
@@ -1034,8 +1053,8 @@
 
   <div class="modal-overlay" id="modalEmailsPassword">
     <div class="modal-card">
-      <h2 class="modal-title">Editar correos</h2>
-      <p class="modal-text" style="margin-bottom:10px;">Ingresa la contraseña para agregar o quitar correos.</p>
+      <h2 class="modal-title">Configuración</h2>
+      <p class="modal-text" style="margin-bottom:10px;">Ingresa la contraseña para administrar correos o nombres.</p>
       <div class="field-group">
         <label class="field-label" for="emailsEditPassword">Contraseña</label>
         <input class="field-input" id="emailsEditPassword" type="password" autocomplete="current-password" placeholder="••••••••">
@@ -1063,13 +1082,31 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modalStaffNames">
+    <div class="modal-card">
+      <h2 class="modal-title" id="staffNamesTitle">Administrar nombres</h2>
+      <p class="modal-text" style="margin-bottom:10px;" id="staffNamesDesc">Agrega o quita nombres de la lista.</p>
+      <div class="email-list" id="staffNamesList"></div>
+      <div class="field-group">
+        <label class="field-label" for="newStaffName">Agregar nombre</label>
+        <input class="field-input" id="newStaffName" type="text" placeholder="Ej. NOMBRE A." autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCloseStaffNames">Cerrar</button>
+        <button class="btn btn-primary" type="button" id="btnAddStaffName">Agregar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbwMVCIqamliT6ypF-JNaGcxfOdW6hvdWjPqe-yDYeuC_9qgNj8_nHPW8qCNYHK_gBXr/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbzRSsV5viXp0nyRQozLxi-oIAQSMB8CCLt4tv3PCHsKaE5dwdzR4SPFSSvJrblhHf0R/exec",
         reportEmails: ["antoniozm007@gmail.com"],
+        calidadNames: ["MICAELA P.", "YOLANDA C.", "KARLA S.", "MARIA R.", "GRACIELA C."],
+        supervisorNames: ["YURIDIA M.", "FERNANDO B.", "MARIO S.", "EMANUEL G."],
         operationalDayStartHour: 16,
         storageKeys: {
           packers: "soaz_packer_catalog_v2",
@@ -1077,7 +1114,9 @@
           shiftDraft: "soaz_shift_draft_v2",
           searchMode: "soaz_packer_search_mode_v2",
           token: "soaz_session_token_v2",
-          reportEmails: "soaz_report_emails_v1"
+          reportEmails: "soaz_report_emails_v1",
+          calidadNames: "soaz_calidad_names_v1",
+          supervisorNames: "soaz_supervisor_names_v1"
         }
       };
 
@@ -1085,7 +1124,7 @@
       var SIMPLE_DEFECTS = [
         { id: "mal_pesado", label: "Mal Pesado", hint: "Peso ↑ / Peso ↓ / Skip", critical: false },
         { id: "pudricion", label: "Pudrición", hint: "Fruta en deterioro", critical: false },
-        { id: "tallones", label: "Golpe", hint: "Daño por golpe", critical: false },
+        { id: "tallones", label: "Golpe / Tallones", hint: "Daño por golpe / tallones", critical: false },
         { id: "calibre_revuelto", label: "Calibre Revuelto", hint: "Predominante y mezclado", critical: false },
         { id: "colores_mixtos", label: "Colores Mixtos", hint: "Predominante y mezclado", critical: false },
         { id: "mal_acomodo", label: "Mal Acomodo", hint: "Acomodo deficiente", critical: true },
@@ -1096,7 +1135,7 @@
       // Calibre Revuelto y Colores Mixtos son simples: solo se elige la cantidad.
       var DETAILED_DEFECTS = [
         { id: "pudricion", label: "Pudrición", type: "qty" },
-        { id: "tallones", label: "Golpe", type: "qty" },
+        { id: "tallones", label: "Golpe / Tallones", type: "qty" },
         { id: "calibre_revuelto", label: "Calibre Revuelto", type: "qty" },
         { id: "colores_mixtos", label: "Colores Mixtos", type: "qty" },
         { id: "mal_acomodo", label: "Mal Acomodo", type: "qty" },
@@ -1110,6 +1149,7 @@
       var state = {
         token: "",
         supervisor: "",
+        calidad: "",
         shiftName: "Primer turno",
         detailedMode: true,
         shiftStartedAt: null,
@@ -1128,6 +1168,8 @@
         isRegistering: false,
         isSendingReport: false,
         emailsEditPassword: "",
+        pendingConfigAction: null,
+        staffNamesType: "calidad",
         packerSearchQuery: "",
         packerSearchMode: "both",
         packerSelectSearchQuery: "",
@@ -1194,7 +1236,7 @@
 
       function updateHeader() {
         dom.supervisorDisplay.textContent = state.supervisor
-          ? (state.supervisor + (state.shiftName ? " · " + state.shiftName : ""))
+          ? ((state.calidad ? state.calidad + " · " : "") + state.supervisor + (state.shiftName ? " · " + state.shiftName : ""))
           : "Sin supervisor";
         dom.operationalDayDisplay.textContent = "Día operativo " + (state.operationalDay ? formatDisplayDate(state.operationalDay) : "—");
         if (state.token) {
@@ -1321,9 +1363,22 @@
       }
 
       function openEmailsPasswordModal() {
+        requireConfigPassword(openReportEmailsModal);
+      }
+
+      function closeEmailsPasswordModal() {
+        if (dom.modalEmailsPassword) { dom.modalEmailsPassword.classList.remove("open"); }
+        if (dom.emailsEditPassword) { dom.emailsEditPassword.value = ""; }
+      }
+
+      function requireConfigPassword(nextFn) {
         closeGearMenu();
+        state.pendingConfigAction = nextFn || null;
         if (state.emailsEditPassword) {
-          openReportEmailsModal();
+          if (typeof state.pendingConfigAction === "function") {
+            state.pendingConfigAction();
+            state.pendingConfigAction = null;
+          }
           return;
         }
         if (dom.emailsEditPassword) { dom.emailsEditPassword.value = ""; }
@@ -1331,11 +1386,6 @@
         setTimeout(function () {
           if (dom.emailsEditPassword) { dom.emailsEditPassword.focus(); }
         }, 50);
-      }
-
-      function closeEmailsPasswordModal() {
-        if (dom.modalEmailsPassword) { dom.modalEmailsPassword.classList.remove("open"); }
-        if (dom.emailsEditPassword) { dom.emailsEditPassword.value = ""; }
       }
 
       function handleConfirmEmailsPassword() {
@@ -1350,7 +1400,10 @@
         }).then(function () {
           state.emailsEditPassword = password;
           closeEmailsPasswordModal();
-          openReportEmailsModal();
+          if (typeof state.pendingConfigAction === "function") {
+            state.pendingConfigAction();
+          }
+          state.pendingConfigAction = null;
         }).catch(function (error) {
           showToast(error.message || "Contraseña incorrecta.", "error");
           if (dom.emailsEditPassword) {
@@ -1358,6 +1411,160 @@
             dom.emailsEditPassword.focus();
           }
         });
+      }
+
+      function getStaffNames(type) {
+        var key = type === "calidad" ? CONFIG.storageKeys.calidadNames : CONFIG.storageKeys.supervisorNames;
+        var fallback = type === "calidad" ? CONFIG.calidadNames : CONFIG.supervisorNames;
+        var list = loadJson(key, null);
+        if (!list || !list.length) { list = fallback.slice(); }
+        return normalizeStaffNames(list);
+      }
+
+      function normalizeStaffNames(list) {
+        var clean = [];
+        var seen = {};
+        (list || []).forEach(function (name) {
+          var n = String(name || "").trim();
+          if (!n) { return; }
+          var k = n.toUpperCase();
+          if (seen[k]) { return; }
+          seen[k] = true;
+          clean.push(n);
+        });
+        return clean;
+      }
+
+      function saveStaffNamesLocal(type, list) {
+        var clean = normalizeStaffNames(list);
+        if (!clean.length) {
+          clean = type === "calidad" ? CONFIG.calidadNames.slice() : CONFIG.supervisorNames.slice();
+        }
+        var key = type === "calidad" ? CONFIG.storageKeys.calidadNames : CONFIG.storageKeys.supervisorNames;
+        saveJson(key, clean);
+        if (type === "calidad") { CONFIG.calidadNames = clean.slice(); }
+        else { CONFIG.supervisorNames = clean.slice(); }
+        return clean;
+      }
+
+      function fillStaffSelect(selectEl, names, selected) {
+        if (!selectEl) { return; }
+        var current = selected || selectEl.value || "";
+        selectEl.innerHTML = "";
+        var placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Selecciona...";
+        selectEl.appendChild(placeholder);
+        (names || []).forEach(function (name) {
+          var opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          selectEl.appendChild(opt);
+        });
+        if (current && names.indexOf(current) !== -1) {
+          selectEl.value = current;
+        }
+      }
+
+      function refreshStaffSelects() {
+        fillStaffSelect(dom.calidadSelect, getStaffNames("calidad"), state.calidad || "");
+        fillStaffSelect(dom.supervisorName, getStaffNames("supervisor"), state.supervisor || "");
+      }
+
+      function refreshStaffNamesFromCloud(type) {
+        return apiRequest({ action: "list_staff_names", type: type }).then(function (data) {
+          if (data.names && data.names.length) {
+            saveStaffNamesLocal(type, data.names);
+          }
+          refreshStaffSelects();
+          return getStaffNames(type);
+        }).catch(function () {
+          return getStaffNames(type);
+        });
+      }
+
+      function renderStaffNamesList() {
+        if (!dom.staffNamesList) { return; }
+        var type = state.staffNamesType || "calidad";
+        var names = getStaffNames(type);
+        dom.staffNamesList.innerHTML = "";
+        if (!names.length) {
+          dom.staffNamesList.innerHTML = '<div class="empty-state">No hay nombres configurados.</div>';
+          return;
+        }
+        names.forEach(function (name) {
+          var row = document.createElement("div");
+          row.className = "email-row";
+          var text = document.createElement("span");
+          text.textContent = name;
+          var del = document.createElement("button");
+          del.type = "button";
+          del.className = "btn-mini danger";
+          del.textContent = "Quitar";
+          del.addEventListener("click", function () {
+            var next = getStaffNames(type).filter(function (n) { return n !== name; });
+            persistStaffNames(type, next);
+          });
+          row.appendChild(text);
+          row.appendChild(del);
+          dom.staffNamesList.appendChild(row);
+        });
+      }
+
+      function persistStaffNames(type, list) {
+        var clean = saveStaffNamesLocal(type, list);
+        refreshStaffSelects();
+        renderStaffNamesList();
+        if (!state.emailsEditPassword) {
+          showToast("Se requiere contraseña para guardar nombres.", "error");
+          return;
+        }
+        apiRequest({
+          action: "save_staff_names",
+          type: type,
+          names: clean,
+          password: state.emailsEditPassword
+        }).then(function () {
+          showToast("Lista actualizada.", "success");
+        }).catch(function (error) {
+          showToast(error.message || "No se pudieron guardar los nombres", "error");
+        });
+      }
+
+      function openStaffNamesModal(type) {
+        state.staffNamesType = type;
+        if (dom.staffNamesTitle) {
+          dom.staffNamesTitle.textContent = type === "calidad"
+            ? "Nombres de Calidad"
+            : "Nombres de Supervisor";
+        }
+        if (dom.staffNamesDesc) {
+          dom.staffNamesDesc.textContent = type === "calidad"
+            ? "Estos nombres aparecen en el menú Calidad del inicio de turno."
+            : "Estos nombres aparecen en el menú Supervisor del inicio de turno.";
+        }
+        if (dom.newStaffName) { dom.newStaffName.value = ""; }
+        renderStaffNamesList();
+        dom.modalStaffNames.classList.add("open");
+        refreshStaffNamesFromCloud(type).then(function () { renderStaffNamesList(); });
+      }
+
+      function handleAddStaffName() {
+        var type = state.staffNamesType || "calidad";
+        var name = String(dom.newStaffName && dom.newStaffName.value || "").trim();
+        if (!name) {
+          showToast("Escribe un nombre.", "error");
+          return;
+        }
+        var list = getStaffNames(type);
+        var exists = list.some(function (n) { return n.toUpperCase() === name.toUpperCase(); });
+        if (exists) {
+          showToast("Ese nombre ya está en la lista.", "info");
+          return;
+        }
+        list.push(name);
+        persistStaffNames(type, list);
+        if (dom.newStaffName) { dom.newStaffName.value = ""; }
       }
 
       function openReportEmailsModal() {
@@ -1454,6 +1661,7 @@
         saveJson(CONFIG.storageKeys.shiftDraft, {
           token: state.token,
           supervisor: state.supervisor,
+          calidad: state.calidad,
           shiftName: state.shiftName,
           detailedMode: state.detailedMode,
           shiftStartedAt: state.shiftStartedAt,
@@ -1472,6 +1680,7 @@
         if (!draft || !draft.supervisor || !draft.token) { return false; }
         state.token = draft.token;
         state.supervisor = draft.supervisor;
+        state.calidad = draft.calidad || "";
         state.shiftName = draft.shiftName || "Primer turno";
         state.detailedMode = draft.detailedMode !== false;
         state.shiftStartedAt = draft.shiftStartedAt;
@@ -1488,6 +1697,7 @@
       function resetShiftState() {
         state.token = "";
         state.supervisor = "";
+        state.calidad = "";
         state.shiftName = "Primer turno";
         state.detailedMode = true;
         state.shiftStartedAt = null;
@@ -1502,6 +1712,7 @@
         state.isRegistering = false;
         state.isSendingReport = false;
         state.emailsEditPassword = "";
+        state.pendingConfigAction = null;
         state.shiftMarkerSent = false;
         state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         localStorage.removeItem(CONFIG.storageKeys.shiftDraft);
@@ -2219,6 +2430,7 @@
           timestamp: nowIso(),
           operationalDay: state.operationalDay,
           supervisor: state.supervisor,
+          calidad: state.calidad,
           mode: state.detailedMode ? "Detallado" : "Simple",
           packerCode: packerCode,
           packerName: packer ? packer.name : "",
@@ -2248,6 +2460,7 @@
           operationalDay: state.operationalDay,
           shiftStartedAt: state.shiftStartedAt,
           supervisor: state.supervisor,
+          calidad: state.calidad,
           defectId: state.currentFlow.defectId,
           defectLabel: state.currentFlow.defectLabel,
           detail: detail,
@@ -2298,6 +2511,7 @@
           operationalDay: state.operationalDay,
           shiftStartedAt: state.shiftStartedAt,
           supervisor: state.supervisor,
+          calidad: state.calidad,
           shiftName: state.shiftName,
           packerCode: packerCode,
           packerName: packer ? packer.name : "",
@@ -2489,18 +2703,26 @@
 
       function handleLoginSubmit(event) {
         event.preventDefault();
+        var calidad = dom.calidadSelect ? dom.calidadSelect.value.trim() : "";
         var name = dom.supervisorName.value.trim();
         var password = dom.password.value;
-        if (!name) { showToast("El nombre del supervisor es obligatorio.", "error"); return; }
+        if (!calidad) { showToast("Selecciona el responsable de Calidad.", "error"); return; }
+        if (!name) { showToast("Selecciona el Supervisor.", "error"); return; }
         if (!password) { showToast("La contraseña es obligatoria.", "error"); return; }
         if (window.location.protocol === "file:") { showToast("Abre la app con abrir-app.bat (http://127.0.0.1:8080/)", "error"); return; }
 
         dom.btnLogin.disabled = true;
         dom.btnLogin.textContent = "Verificando...";
 
-        apiRequest({ action: "authenticate", supervisor: name, password: password }).then(function (data) {
+        apiRequest({
+          action: "authenticate",
+          supervisor: name,
+          calidad: calidad,
+          password: password
+        }).then(function (data) {
           state.token = data.token;
           state.supervisor = data.supervisor || name;
+          state.calidad = data.calidad || calidad;
           state.shiftName = getSelectedSearchMode("shiftSelect") || "Primer turno";
           state.detailedMode = dom.detailedModeToggle.checked;
           state.shiftStartedAt = nowIso();
@@ -2546,6 +2768,7 @@
             operationalDay: state.operationalDay,
             shiftStartedAt: state.shiftStartedAt,
             supervisor: state.supervisor,
+            calidad: state.calidad,
             shiftName: state.shiftName,
             mode: state.detailedMode ? "detailed" : "simple",
             activePackerCount: getActivePackers().length,
@@ -2578,6 +2801,7 @@
           operationalDay: state.operationalDay,
           shiftStartedAt: state.shiftStartedAt,
           supervisor: state.supervisor,
+          calidad: state.calidad,
           shiftName: state.shiftName,
           mode: state.detailedMode ? "detailed" : "simple",
           emails: emails
@@ -2630,6 +2854,7 @@
           operationalDay: state.operationalDay,
           shiftStartedAt: state.shiftStartedAt,
           supervisor: state.supervisor,
+          calidad: state.calidad,
           shiftName: state.shiftName,
           mode: state.detailedMode ? "detailed" : "simple",
           emails: getReportEmails()
@@ -2652,6 +2877,7 @@
         }).finally(function () {
           resetShiftState();
           dom.supervisorName.value = "";
+          if (dom.calidadSelect) { dom.calidadSelect.value = ""; }
           if (dom.password) { dom.password.value = ""; }
           updateHeader();
           showScreen("screenLogin");
@@ -2727,6 +2953,16 @@
         if (dom.menuManageEmails) {
           dom.menuManageEmails.addEventListener("click", openEmailsPasswordModal);
         }
+        if (dom.menuManageCalidad) {
+          dom.menuManageCalidad.addEventListener("click", function () {
+            requireConfigPassword(function () { openStaffNamesModal("calidad"); });
+          });
+        }
+        if (dom.menuManageSupervisor) {
+          dom.menuManageSupervisor.addEventListener("click", function () {
+            requireConfigPassword(function () { openStaffNamesModal("supervisor"); });
+          });
+        }
         if (dom.btnConfirmEmailsPassword) {
           dom.btnConfirmEmailsPassword.addEventListener("click", handleConfirmEmailsPassword);
         }
@@ -2747,6 +2983,22 @@
         if (dom.btnCloseReportEmails) {
           dom.btnCloseReportEmails.addEventListener("click", function () {
             dom.modalReportEmails.classList.remove("open");
+          });
+        }
+        if (dom.btnAddStaffName) {
+          dom.btnAddStaffName.addEventListener("click", handleAddStaffName);
+        }
+        if (dom.btnCloseStaffNames) {
+          dom.btnCloseStaffNames.addEventListener("click", function () {
+            dom.modalStaffNames.classList.remove("open");
+          });
+        }
+        if (dom.newStaffName) {
+          dom.newStaffName.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              handleAddStaffName();
+            }
           });
         }
         document.addEventListener("click", function (event) {
@@ -2830,6 +3082,7 @@
       function initDomRefs() {
         dom.loginForm = byId("loginForm");
         dom.supervisorName = byId("supervisorName");
+        dom.calidadSelect = byId("calidadSelect");
         dom.password = byId("password");
         dom.detailedModeToggle = byId("detailedModeToggle");
         dom.btnLogin = byId("btnLogin");
@@ -2863,6 +3116,8 @@
         dom.gearMenu = byId("gearMenu");
         dom.menuSendReport = byId("menuSendReport");
         dom.menuManageEmails = byId("menuManageEmails");
+        dom.menuManageCalidad = byId("menuManageCalidad");
+        dom.menuManageSupervisor = byId("menuManageSupervisor");
         dom.modalEmailsPassword = byId("modalEmailsPassword");
         dom.emailsEditPassword = byId("emailsEditPassword");
         dom.btnConfirmEmailsPassword = byId("btnConfirmEmailsPassword");
@@ -2872,6 +3127,13 @@
         dom.newReportEmail = byId("newReportEmail");
         dom.btnAddReportEmail = byId("btnAddReportEmail");
         dom.btnCloseReportEmails = byId("btnCloseReportEmails");
+        dom.modalStaffNames = byId("modalStaffNames");
+        dom.staffNamesTitle = byId("staffNamesTitle");
+        dom.staffNamesDesc = byId("staffNamesDesc");
+        dom.staffNamesList = byId("staffNamesList");
+        dom.newStaffName = byId("newStaffName");
+        dom.btnAddStaffName = byId("btnAddStaffName");
+        dom.btnCloseStaffNames = byId("btnCloseStaffNames");
         dom.flowStepLabel = byId("flowStepLabel");
         dom.flowTitle = byId("flowTitle");
         dom.flowDescription = byId("flowDescription");
@@ -2915,6 +3177,11 @@
         state.packerCatalog = loadJson(CONFIG.storageKeys.packers, []);
         state.pendingQueue = loadJson(CONFIG.storageKeys.pendingQueue, []);
         CONFIG.reportEmails = getReportEmails();
+        CONFIG.calidadNames = getStaffNames("calidad");
+        CONFIG.supervisorNames = getStaffNames("supervisor");
+        refreshStaffSelects();
+        refreshStaffNamesFromCloud("calidad").catch(function () {});
+        refreshStaffNamesFromCloud("supervisor").catch(function () {});
         state.packerSearchMode = localStorage.getItem(CONFIG.storageKeys.searchMode) || "both";
         state.packerSelectSearchMode = state.packerSearchMode;
         setSearchModeRadios("packerSearchMode", state.packerSearchMode);

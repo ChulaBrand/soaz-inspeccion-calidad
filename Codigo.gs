@@ -32,6 +32,10 @@ var CONFIG = {
   ALERT_EMAILS: ["antoniozm007@gmail.com"],
   REPORT_EMAILS: ["antoniozm007@gmail.com"],
 
+  // Listas iniciales de Calidad y Supervisor (editables desde la app).
+  CALIDAD_NAMES: ["MICAELA P.", "YOLANDA C.", "KARLA S.", "MARIA R.", "GRACIELA C."],
+  SUPERVISOR_NAMES: ["YURIDIA M.", "FERNANDO B.", "MARIO S.", "EMANUEL G."],
+
   // Vigencia del token de sesión (horas).
   SESSION_HOURS: 12,
 
@@ -61,15 +65,17 @@ var HEADERS = {
     "Count",
     "Papayas con defecto",
     "Papayas buenas",
-    "Golpe",
+    "Golpe / Tallones",
     "Mal Acomodo",
     "Pudrición",
     "Mal Envuelto",
     "Colores Mixtos",
     "Calibre Revuelto",
-    "Mal Pesado"
+    "Mal Pesado",
+    "Calidad",
+    "Supervisor"
   ],
-  // Misma info de cajas, sin marcadores de turno; Turno y Supervisor en columnas.
+  // Misma info de cajas, sin marcadores de turno; Turno, Calidad y Supervisor en columnas.
   detailedRaw: [
     "Audit ID",
     "Timestamp",
@@ -78,7 +84,7 @@ var HEADERS = {
     "Count",
     "Papayas con defecto",
     "Papayas buenas",
-    "Golpe",
+    "Golpe / Tallones",
     "Mal Acomodo",
     "Pudrición",
     "Mal Envuelto",
@@ -86,6 +92,7 @@ var HEADERS = {
     "Calibre Revuelto",
     "Mal Pesado",
     "Turno",
+    "Calidad",
     "Supervisor"
   ],
   packers: ["Código", "Nombre", "Activo"],
@@ -113,8 +120,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v13",
-        message: "API activa. Reportes v13: Tallones renombrado a Golpe."
+        version: "report-v14",
+        message: "API activa. v14: Calidad/Supervisor + Golpe / Tallones."
       };
     }
     return respond_(e, result);
@@ -170,7 +177,7 @@ function errText_(error) {
  *  ROUTER DE ACCIONES
  * ========================================================================= */
 
-var PUBLIC_ACTIONS = { authenticate: true };
+var PUBLIC_ACTIONS = { authenticate: true, list_staff_names: true };
 
 function executeAction_(payload) {
   var action = payload.action || "";
@@ -201,6 +208,8 @@ function executeAction_(payload) {
     case "list_report_emails": return handleListReportEmails_();
     case "save_report_emails": return handleSaveReportEmails_(payload);
     case "verify_emails_password": return handleVerifyEmailsPassword_(payload);
+    case "list_staff_names": return handleListStaffNames_(payload);
+    case "save_staff_names": return handleSaveStaffNames_(payload);
     default: return { ok: false, error: "Acción no reconocida: " + action };
   }
 }
@@ -212,16 +221,20 @@ function executeAction_(payload) {
 function handleAuthenticate_(payload) {
   var password = String(payload.password || "");
   var supervisor = String(payload.supervisor || "").trim();
+  var calidad = String(payload.calidad || "").trim();
 
+  if (!calidad) {
+    return { ok: false, error: "Selecciona el responsable de Calidad" };
+  }
   if (!supervisor) {
-    return { ok: false, error: "Nombre del supervisor obligatorio" };
+    return { ok: false, error: "Selecciona el Supervisor" };
   }
   if (password !== CONFIG.APP_PASSWORD) {
     return { ok: false, error: "Contraseña incorrecta" };
   }
 
   var token = createSession_(supervisor);
-  return { ok: true, token: token, supervisor: supervisor };
+  return { ok: true, token: token, supervisor: supervisor, calidad: calidad };
 }
 
 function createSession_(supervisor) {
@@ -403,9 +416,10 @@ function handleRegisterDetailed_(payload) {
   var qtyByDefect = aggregateDetailedQtys_(payload.rows || []);
   var malPesado = qtyByDefect.malPesadoText || "";
   var supervisor = payload.supervisor || payload._supervisorFromToken || "";
+  var calidad = String(payload.calidad || "").trim();
   var shiftName = payload.shiftName || "";
 
-  var dataRow = [
+  var coreRow = [
     payload.auditId || "",
     formatTimestamp_(payload.timestamp),
     payload.packerCode || "",
@@ -413,7 +427,7 @@ function handleRegisterDetailed_(payload) {
     payload.count != null ? payload.count : "",
     payload.assigned != null ? payload.assigned : 0,
     payload.buenas != null ? payload.buenas : "",
-    qtyByDefect["Golpe"] || 0,
+    qtyByDefect["Golpe / Tallones"] || qtyByDefect["Golpe"] || 0,
     qtyByDefect["Mal Acomodo"] || 0,
     qtyByDefect["Pudrición"] || 0,
     qtyByDefect["Mal Envuelto"] || 0,
@@ -422,11 +436,11 @@ function handleRegisterDetailed_(payload) {
     malPesado
   ];
 
-  // 1 sola fila por caja. Cada defecto en su columna.
-  sheet.appendRow(dataRow);
+  // Hoja detallada: defectos + Calidad + Supervisor.
+  sheet.appendRow(coreRow.concat([calidad, supervisor]));
 
-  // Hoja bruta: mismos datos + Turno + Supervisor (sin marcadores).
-  appendDetailedRawRow_(dataRow, shiftName, supervisor);
+  // Hoja bruta: mismos defectos + Turno + Calidad + Supervisor.
+  appendDetailedRawRow_(coreRow, shiftName, calidad, supervisor);
 
   bumpSummary_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
 
@@ -440,7 +454,7 @@ function handleRegisterDetailed_(payload) {
 function aggregateDetailedQtys_(rows) {
   var map = {
     "Pudrición": 0,
-    "Golpe": 0,
+    "Golpe / Tallones": 0,
     "Calibre Revuelto": 0,
     "Colores Mixtos": 0,
     "Mal Acomodo": 0,
@@ -454,6 +468,9 @@ function aggregateDetailedQtys_(rows) {
     var name = String(r.defecto || "").trim();
     if (!name || name === "Sin defectos" || name === "Sin fruta desviada") {
       continue;
+    }
+    if (name === "Golpe" || name === "Tallones" || name === "Golpe / Tallones") {
+      name = "Golpe / Tallones";
     }
     if (name === "Mal Pesado") {
       map.malPesadoText = r.malPesado || r.variante || "Sí";
@@ -568,10 +585,11 @@ function ensureDetailedRawSheet_() {
   return sheet;
 }
 
-function appendDetailedRawRow_(dataRow, shiftName, supervisor) {
+function appendDetailedRawRow_(dataRow, shiftName, calidad, supervisor) {
   var sheet = ensureDetailedRawSheet_();
   var row = (dataRow || []).slice();
   row.push(shiftName || "");
+  row.push(calidad || "");
   row.push(supervisor || "");
   sheet.appendRow(row);
 }
@@ -593,12 +611,14 @@ function migrarInspeccionesBruto() {
     dest.deleteRows(2, dest.getLastRow() - 1);
   }
 
-  var width = HEADERS.detailed.length;
+  var width = Math.max(HEADERS.detailed.length, 14);
   var values = src.getRange(2, 1, lastRow, width).getValues();
   var out = [];
   var currentShift = "";
   var currentSupervisor = "";
+  var currentCalidad = "";
   var i;
+  var coreWidth = 14; // hasta Mal Pesado
 
   for (i = 0; i < values.length; i += 1) {
     var row = values[i];
@@ -617,15 +637,17 @@ function migrarInspeccionesBruto() {
 
     var rawRow = [];
     var c;
-    for (c = 0; c < width; c += 1) {
-      rawRow.push(row[c]);
+    for (c = 0; c < coreWidth; c += 1) {
+      rawRow.push(row[c] != null ? row[c] : "");
     }
-    // Timestamp formateado si viene como Date
     if (rawRow[1] instanceof Date) {
       rawRow[1] = formatTimestamp_(rawRow[1].toISOString());
     }
+    var rowCalidad = String(row[14] || "").trim() || currentCalidad;
+    var rowSupervisor = String(row[15] || "").trim() || currentSupervisor;
     rawRow.push(currentShift);
-    rawRow.push(currentSupervisor);
+    rawRow.push(rowCalidad);
+    rawRow.push(rowSupervisor);
     out.push(rawRow);
   }
 
@@ -750,6 +772,9 @@ function handleOpenShift_(payload) {
   if (width > 5) {
     markerRow[5] = "Turno: " + (payload.shiftName || "");
   }
+  if (width > 6) {
+    markerRow[6] = "Calidad: " + (payload.calidad || "");
+  }
 
   sheet.appendRow(markerRow);
   var markerRowIndex = sheet.getLastRow();
@@ -847,7 +872,7 @@ var REPORT_DEFECT_COLS = [
   "Mal Acomodo",
   "Pudrición",
   "Mal Envuelto",
-  "Golpe",
+  "Golpe / Tallones",
   "Colores Mixtos",
   "Calibre Revuelto",
   "Mal Pesado"
@@ -945,6 +970,68 @@ function handleSaveReportEmails_(payload) {
   }
   PropertiesService.getScriptProperties().setProperty("REPORT_EMAILS", JSON.stringify(emails));
   return { ok: true, action: "save_report_emails", emails: emails };
+}
+
+function handleListStaffNames_(payload) {
+  var type = String(payload.type || "").trim().toLowerCase();
+  if (type !== "calidad" && type !== "supervisor") {
+    return { ok: false, error: "Tipo inválido. Usa calidad o supervisor." };
+  }
+  return { ok: true, action: "list_staff_names", type: type, names: getStoredStaffNames_(type) };
+}
+
+function handleSaveStaffNames_(payload) {
+  if (String(payload.password || "") !== String(CONFIG.EMAILS_EDIT_PASSWORD || "")) {
+    return { ok: false, error: "Contraseña incorrecta. No se pudieron guardar los nombres." };
+  }
+  var type = String(payload.type || "").trim().toLowerCase();
+  if (type !== "calidad" && type !== "supervisor") {
+    return { ok: false, error: "Tipo inválido. Usa calidad o supervisor." };
+  }
+  var names = normalizeStaffNames_(payload.names || []);
+  if (!names.length) {
+    names = getDefaultStaffNames_(type);
+  }
+  PropertiesService.getScriptProperties().setProperty(
+    type === "calidad" ? "CALIDAD_NAMES" : "SUPERVISOR_NAMES",
+    JSON.stringify(names)
+  );
+  return { ok: true, action: "save_staff_names", type: type, names: names };
+}
+
+function getDefaultStaffNames_(type) {
+  return type === "calidad"
+    ? CONFIG.CALIDAD_NAMES.slice()
+    : CONFIG.SUPERVISOR_NAMES.slice();
+}
+
+function getStoredStaffNames_(type) {
+  var key = type === "calidad" ? "CALIDAD_NAMES" : "SUPERVISOR_NAMES";
+  try {
+    var raw = PropertiesService.getScriptProperties().getProperty(key);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      var list = normalizeStaffNames_(parsed);
+      if (list.length) { return list; }
+    }
+  } catch (ignoreProp) {
+  }
+  return getDefaultStaffNames_(type);
+}
+
+function normalizeStaffNames_(list) {
+  var out = [];
+  var seen = {};
+  var i;
+  for (i = 0; i < (list || []).length; i += 1) {
+    var name = String(list[i] || "").trim();
+    if (!name) { continue; }
+    var key = name.toUpperCase();
+    if (seen[key]) { continue; }
+    seen[key] = true;
+    out.push(name);
+  }
+  return out;
 }
 
 function resolveReportEmails_(incoming) {
@@ -1119,7 +1206,7 @@ function buildPackerReport_(options) {
           "Mal Acomodo": 0,
           "Pudrición": 0,
           "Mal Envuelto": 0,
-          "Golpe": 0,
+          "Golpe / Tallones": 0,
           "Colores Mixtos": 0,
           "Calibre Revuelto": 0,
           "Mal Pesado": 0
@@ -1133,7 +1220,7 @@ function buildPackerReport_(options) {
       item.countTotal += count;
       // DESV = papayas con defecto + Mal Pesado (vale 1 por caja).
       item.desv += assigned + malPesado;
-      item["Golpe"] += tallones;
+      item["Golpe / Tallones"] += tallones;
       item["Mal Acomodo"] += malAcomodo;
       item["Pudrición"] += pudricion;
       item["Mal Envuelto"] += malEnvuelto;
@@ -1152,7 +1239,7 @@ function buildPackerReport_(options) {
     "Mal Acomodo": 0,
     "Pudrición": 0,
     "Mal Envuelto": 0,
-    "Golpe": 0,
+    "Golpe / Tallones": 0,
     "Colores Mixtos": 0,
     "Calibre Revuelto": 0,
     "Mal Pesado": 0
@@ -1174,7 +1261,7 @@ function buildPackerReport_(options) {
         "Mal Acomodo": item["Mal Acomodo"],
         "Pudrición": item["Pudrición"],
         "Mal Envuelto": item["Mal Envuelto"],
-        "Golpe": item["Golpe"],
+        "Golpe / Tallones": item["Golpe / Tallones"],
         "Colores Mixtos": item["Colores Mixtos"],
         "Calibre Revuelto": item["Calibre Revuelto"],
         "Mal Pesado": item["Mal Pesado"]
@@ -1183,7 +1270,7 @@ function buildPackerReport_(options) {
     defectTotalsMap["Mal Acomodo"] += item["Mal Acomodo"];
     defectTotalsMap["Pudrición"] += item["Pudrición"];
     defectTotalsMap["Mal Envuelto"] += item["Mal Envuelto"];
-    defectTotalsMap["Golpe"] += item["Golpe"];
+    defectTotalsMap["Golpe / Tallones"] += item["Golpe / Tallones"];
     defectTotalsMap["Colores Mixtos"] += item["Colores Mixtos"];
     defectTotalsMap["Calibre Revuelto"] += item["Calibre Revuelto"];
     defectTotalsMap["Mal Pesado"] += item["Mal Pesado"];
@@ -1324,7 +1411,7 @@ function buildReportHtml_(report) {
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Acomodo"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Pudrición"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Envuelto"]) + "</td>" +
-      "<td style='text-align:right;'>" + fmtDef_(r.defects["Golpe"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Golpe / Tallones"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Colores Mixtos"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Calibre Revuelto"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Pesado"]) + "</td>" +
@@ -1341,7 +1428,7 @@ function buildReportHtml_(report) {
   return (
     "<div style='font-family:Arial,sans-serif;color:#111;'>" +
     "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
-    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v13 · Acumulado del turno</p>" +
+    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v14 · Acumulado del turno</p>" +
     "<p style='margin:0 0 16px;color:#444;'>" +
     "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
     "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
@@ -1378,7 +1465,7 @@ function buildReportHtml_(report) {
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
     "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>COUNT T.</th><th>DESV</th>" +
-    "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Golpe</th>" +
+    "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Golpe / Tallones</th>" +
     "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Mal Pesado</th>" +
     "</tr>" +
     defectRows +

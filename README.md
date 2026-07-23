@@ -72,7 +72,7 @@ Acciones protegidas: `list_packers`, `upsert_packer`, `delete_packer`, `register
 3. **Modo simple** (toggle apagado): tablero de defectos con rutas → empacador → guarda en `Inspecciones Simples`. Cada inspección suma **1 error**.
 4. **Modo detallado** (toggle encendido):
    - **Count** (5–20): total de papayas en la caja.
-   - **Defectos**: lista táctil (Pudrición, Golpe, Calibre Revuelto, Colores Mixtos, Mal Acomodo, Mal Envuelto, Mal Pesado). En cada defecto solo se elige **la cantidad** de papayas afectadas; asignación exclusiva (una papaya, un defecto). **Mal Pesado** es a nivel caja (Peso ↑/↓) y no consume Count.
+   - **Defectos**: lista táctil (Pudrición, Golpe / Tallones, Calibre Revuelto, Colores Mixtos, Mal Acomodo, Mal Envuelto, Mal Pesado). En cada defecto solo se elige **la cantidad** de papayas afectadas; asignación exclusiva (una papaya, un defecto). **Mal Pesado** es a nivel caja (Peso ↑/↓) y no consume Count.
    - Las papayas restantes se calculan automáticamente como buenas.
    - **Submit** → empacador → guarda en `Inspecciones Detalladas` (**1 fila por caja**, con una columna por cada defecto) → vuelve a **Count**.
    - Una auditoría con ≥1 defecto suma **1 error**; sin defectos suma **0** y se registra como `Sin defectos`.
@@ -81,7 +81,7 @@ Acciones protegidas: `list_packers`, `upsert_packer`, `delete_packer`, `register
 
 Columnas visibles:
 
-`Audit ID | Timestamp | Código empacador | Nombre empacador | Count | Papayas con defecto | Papayas buenas | Golpe | Mal Acomodo | Pudrición | Mal Envuelto | Colores Mixtos | Calibre Revuelto | Mal Pesado`
+`Audit ID | Timestamp | Código empacador | Nombre empacador | Count | Papayas con defecto | Papayas buenas | Golpe / Tallones | Mal Acomodo | Pudrición | Mal Envuelto | Colores Mixtos | Calibre Revuelto | Mal Pesado`
 
 - **1 fila = 1 caja** (ya no se repite una fila por cada defecto).
 - Supervisor e inicio de turno aparecen en la **fila amarilla** de cambio de turno.
