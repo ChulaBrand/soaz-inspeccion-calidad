@@ -1103,7 +1103,7 @@
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbzRSsV5viXp0nyRQozLxi-oIAQSMB8CCLt4tv3PCHsKaE5dwdzR4SPFSSvJrblhHf0R/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbzxVYpYwX-A_L5rLaeGEt4vHHqlk_6ZC5HhACLClHIsLi4rH7zltgEUHS-F0YoLCWyr/exec",
         reportEmails: ["antoniozm007@gmail.com"],
         calidadNames: ["MICAELA P.", "YOLANDA C.", "KARLA S.", "MARIA R.", "GRACIELA C."],
         supervisorNames: ["YURIDIA M.", "FERNANDO B.", "MARIO S.", "EMANUEL G."],
@@ -1123,24 +1123,27 @@
       // Modo simple: definición de defectos y rutas.
       var SIMPLE_DEFECTS = [
         { id: "mal_pesado", label: "Mal Pesado", hint: "Peso ↑ / Peso ↓ / Skip", critical: false },
+        { id: "caja_mala", label: "Caja Mala", hint: "Caja inadecuada (1 valor)", critical: false },
         { id: "pudricion", label: "Pudrición", hint: "Fruta en deterioro", critical: false },
         { id: "tallones", label: "Golpe / Tallones", hint: "Daño por golpe / tallones", critical: false },
         { id: "calibre_revuelto", label: "Calibre Revuelto", hint: "Predominante y mezclado", critical: false },
         { id: "colores_mixtos", label: "Colores Mixtos", hint: "Predominante y mezclado", critical: false },
+        { id: "calidades_revueltas", label: "Calidades Revueltas", hint: "Primera calidad mezclada con otras", critical: false },
         { id: "mal_acomodo", label: "Mal Acomodo", hint: "Acomodo deficiente", critical: true },
         { id: "mal_envuelto", label: "Mal Envuelto", hint: "Empaque deficiente", critical: false }
       ];
 
-      // Modo detallado: lista vertical (Mal Pesado siempre al final).
-      // Calibre Revuelto y Colores Mixtos son simples: solo se elige la cantidad.
+      // Modo detallado: lista vertical (Mal Pesado / Caja Mala al final, no consumen Count).
       var DETAILED_DEFECTS = [
         { id: "pudricion", label: "Pudrición", type: "qty" },
         { id: "tallones", label: "Golpe / Tallones", type: "qty" },
         { id: "calibre_revuelto", label: "Calibre Revuelto", type: "qty" },
         { id: "colores_mixtos", label: "Colores Mixtos", type: "qty" },
+        { id: "calidades_revueltas", label: "Calidades Revueltas", type: "qty" },
         { id: "mal_acomodo", label: "Mal Acomodo", type: "qty" },
         { id: "mal_envuelto", label: "Mal Envuelto", type: "qty" },
-        { id: "mal_pesado", label: "Mal Pesado", type: "weight" }
+        { id: "mal_pesado", label: "Mal Pesado", type: "weight" },
+        { id: "caja_mala", label: "Caja Mala", type: "flag" }
       ];
 
       // Todos los Counts posibles, desde 5 hasta 20 papayas.
@@ -1910,7 +1913,21 @@
           }
         }
 
-        if (flow.defectId === "pudricion" || flow.defectId === "tallones" || flow.defectId === "mal_acomodo" || flow.defectId === "mal_envuelto") {
+        if (flow.defectId === "caja_mala") {
+          if (!flow.details.cajaMala) {
+            renderFlowStep({
+              stepLabel: "Paso 1 · Caja", title: "Caja Mala",
+              description: "Marca si la caja es inadecuada.",
+              breadcrumb: flow.defectLabel,
+              options: [
+                { label: "Sí · Caja inadecuada", action: function () { flow.details.cajaMala = "Sí"; goToPackerSelect("simple"); } }
+              ], gridClass: "btn-grid-1"
+            });
+            return;
+          }
+        }
+
+        if (flow.defectId === "pudricion" || flow.defectId === "tallones" || flow.defectId === "mal_acomodo" || flow.defectId === "mal_envuelto" || flow.defectId === "calidades_revueltas") {
           goToPackerSelect("simple");
           return;
         }
@@ -2043,7 +2060,7 @@
       /* ---------- Modo detallado: auditoría ---------- */
 
       function newAudit() {
-        return { auditId: uid("audit"), count: null, defects: {}, malPesado: null };
+        return { auditId: uid("audit"), count: null, defects: {}, malPesado: null, cajaMala: null };
       }
 
       function startNewBox() {
@@ -2076,6 +2093,7 @@
         state.currentAudit.count = n;
         state.currentAudit.defects = {};
         state.currentAudit.malPesado = null;
+        state.currentAudit.cajaMala = null;
         state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         saveShiftDraft();
         renderDetailedScreen();
@@ -2100,7 +2118,9 @@
       }
 
       function auditHasDefect() {
-        return auditAssigned() > 0 || Boolean(state.currentAudit && state.currentAudit.malPesado);
+        return auditAssigned() > 0 ||
+          Boolean(state.currentAudit && state.currentAudit.malPesado) ||
+          Boolean(state.currentAudit && state.currentAudit.cajaMala);
       }
 
       function renderTotals() {
@@ -2145,6 +2165,7 @@
         if (state.currentAudit && !state.currentAudit.defects) {
           state.currentAudit.defects = {};
           state.currentAudit.malPesado = state.currentAudit.malPesado || null;
+          state.currentAudit.cajaMala = state.currentAudit.cajaMala || null;
         }
         renderTotals();
         var list = dom.detailedList;
@@ -2166,6 +2187,9 @@
           } else if (def.type === "weight") {
             hasValue = Boolean(audit.malPesado);
             badgeText = hasValue ? audit.malPesado : "Caja completa";
+          } else if (def.type === "flag") {
+            hasValue = Boolean(audit.cajaMala);
+            badgeText = hasValue ? audit.cajaMala : "Marcar";
           }
 
           if (hasValue) { card.classList.add("has-value"); }
@@ -2262,6 +2286,31 @@
           return body;
         }
 
+        if (def.type === "flag") {
+          var flbl = document.createElement("div");
+          flbl.className = "sub-label";
+          flbl.textContent = "Caja Mala (no consume papayas del Count)";
+          body.appendChild(flbl);
+          var fgrid = document.createElement("div");
+          fgrid.className = "btn-grid btn-grid-2";
+          var fb = document.createElement("button");
+          fb.type = "button";
+          fb.className = "btn-option" + (state.currentAudit.cajaMala === "Sí" ? " selected" : "");
+          fb.textContent = "Sí · Caja inadecuada";
+          fb.addEventListener("click", function () {
+            state.currentAudit.cajaMala = "Sí";
+            state.ui.expandedDefect = null;
+            saveShiftDraft();
+            renderDetailedScreen();
+          });
+          fgrid.appendChild(fb);
+          body.appendChild(fgrid);
+          if (hasValue) {
+            body.appendChild(buildValueSummary("Seleccionado: " + state.currentAudit.cajaMala, def.id, "flag"));
+          }
+          return body;
+        }
+
         return body;
       }
 
@@ -2291,6 +2340,7 @@
         del.textContent = "Borrar";
         del.addEventListener("click", function () {
           if (type === "weight") { state.currentAudit.malPesado = null; }
+          else if (type === "flag") { state.currentAudit.cajaMala = null; }
           else { delete state.currentAudit.defects[defectId]; }
           state.ui.editingDefect = null;
           saveShiftDraft();
@@ -2314,6 +2364,7 @@
           }
         });
         if (audit.malPesado) { parts.push("Mal Pesado (" + audit.malPesado + ")"); }
+        if (audit.cajaMala) { parts.push("Caja Mala (" + audit.cajaMala + ")"); }
         return parts.length ? parts.join(" · ") : "Sin defectos";
       }
 
@@ -2323,11 +2374,14 @@
         DETAILED_DEFECTS.forEach(function (def) {
           var entry = audit.defects[def.id];
           if (def.type === "qty" && entry && entry.qty) {
-            rows.push({ defecto: def.label, variante: "", cantidad: entry.qty, malPesado: "" });
+            rows.push({ defecto: def.label, variante: "", cantidad: entry.qty, malPesado: "", cajaMala: "" });
           }
         });
         if (audit.malPesado) {
-          rows.push({ defecto: "Mal Pesado", variante: audit.malPesado, cantidad: 0, malPesado: audit.malPesado });
+          rows.push({ defecto: "Mal Pesado", variante: audit.malPesado, cantidad: 0, malPesado: audit.malPesado, cajaMala: "" });
+        }
+        if (audit.cajaMala) {
+          rows.push({ defecto: "Caja Mala", variante: audit.cajaMala, cantidad: 0, malPesado: "", cajaMala: audit.cajaMala });
         }
         return rows;
       }
@@ -2527,18 +2581,33 @@
         if (hasDefect) {
           incrementPackerErrors(packerCode, "Count " + audit.count + " · " + summary);
         }
+        // Limpia el audit actual antes de enviar para no reenviar el mismo ID.
+        state.currentAudit = null;
         saveShiftDraft();
 
         sendToApi(record).then(function () {
           showToast(hasDefect ? ("Auditoría guardada · " + packerCode) : ("Caja sin defectos · " + packerCode), "success");
         }).catch(function () {
-          state.pendingQueue.push(record);
-          savePendingQueue();
+          enqueuePendingUnique(record);
           showToast("Auditoría en cola local · " + packerCode, "info");
         }).finally(function () {
           state.isRegistering = false;
           startNewBox();
         });
+      }
+
+      function enqueuePendingUnique(record) {
+        if (!record) { return; }
+        var auditId = String(record.auditId || "").trim();
+        var recordId = String(record.recordId || "").trim();
+        var exists = state.pendingQueue.some(function (item) {
+          if (auditId && item.auditId === auditId) { return true; }
+          if (recordId && item.recordId === recordId) { return true; }
+          return false;
+        });
+        if (exists) { return; }
+        state.pendingQueue.push(record);
+        savePendingQueue();
       }
 
       function lockPackerButtons() {
@@ -2569,7 +2638,7 @@
             if (settled) { return; }
             settled = true; cleanup();
             reject(new Error("Timeout al contactar Google Sheets"));
-          }, 20000);
+          }, payload && payload.action && String(payload.action).indexOf("register_") === 0 ? 45000 : 20000);
 
           function cleanup() {
             window.clearTimeout(timer);
@@ -3034,6 +3103,7 @@
           if (state.currentAudit) {
             state.currentAudit.defects = {};
             state.currentAudit.malPesado = null;
+            state.currentAudit.cajaMala = null;
           }
           state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
           saveShiftDraft();
@@ -3043,7 +3113,7 @@
         dom.btnCancelChangeCount.addEventListener("click", function () { dom.modalChangeCount.classList.remove("open"); });
         dom.btnConfirmChangeCount.addEventListener("click", function () {
           dom.modalChangeCount.classList.remove("open");
-          if (state.currentAudit) { state.currentAudit.defects = {}; state.currentAudit.malPesado = null; }
+          if (state.currentAudit) { state.currentAudit.defects = {}; state.currentAudit.malPesado = null; state.currentAudit.cajaMala = null; }
           state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
           renderCountGrid();
           showScreen("screenCount");

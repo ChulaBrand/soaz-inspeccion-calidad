@@ -71,7 +71,9 @@ var HEADERS = {
     "Mal Envuelto",
     "Colores Mixtos",
     "Calibre Revuelto",
+    "Calidades Revueltas",
     "Mal Pesado",
+    "Caja Mala",
     "Calidad",
     "Supervisor"
   ],
@@ -90,7 +92,9 @@ var HEADERS = {
     "Mal Envuelto",
     "Colores Mixtos",
     "Calibre Revuelto",
+    "Calidades Revueltas",
     "Mal Pesado",
+    "Caja Mala",
     "Turno",
     "Calidad",
     "Supervisor"
@@ -120,8 +124,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v14",
-        message: "API activa. v14: Calidad/Supervisor + Golpe / Tallones."
+        version: "report-v15",
+        message: "API activa. v15: Calidades Revueltas, Caja Mala, anti-duplicados, Calidad en reporte."
       };
     }
     return respond_(e, result);
@@ -413,14 +417,28 @@ function handleRegisterSimple_(payload) {
 function handleRegisterDetailed_(payload) {
   var sheet = ensureDetailedSheet_();
   var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
+  var auditId = String(payload.auditId || "").trim();
+
+  // Evita filas duplicadas si el cliente reintenta / hace timeout.
+  if (auditId && auditIdExistsInSheet_(sheet, auditId)) {
+    return {
+      ok: true,
+      action: "register_detailed_inspection",
+      operationalDay: operationalDay,
+      rows: 0,
+      duplicate: true
+    };
+  }
+
   var qtyByDefect = aggregateDetailedQtys_(payload.rows || []);
   var malPesado = qtyByDefect.malPesadoText || "";
+  var cajaMala = qtyByDefect.cajaMalaText || "";
   var supervisor = payload.supervisor || payload._supervisorFromToken || "";
   var calidad = String(payload.calidad || "").trim();
   var shiftName = payload.shiftName || "";
 
   var coreRow = [
-    payload.auditId || "",
+    auditId,
     formatTimestamp_(payload.timestamp),
     payload.packerCode || "",
     payload.packerName || "",
@@ -433,7 +451,9 @@ function handleRegisterDetailed_(payload) {
     qtyByDefect["Mal Envuelto"] || 0,
     qtyByDefect["Colores Mixtos"] || 0,
     qtyByDefect["Calibre Revuelto"] || 0,
-    malPesado
+    qtyByDefect["Calidades Revueltas"] || 0,
+    malPesado,
+    cajaMala
   ];
 
   // Hoja detallada: defectos + Calidad + Supervisor.
@@ -447,6 +467,21 @@ function handleRegisterDetailed_(payload) {
   return { ok: true, action: "register_detailed_inspection", operationalDay: operationalDay, rows: 1 };
 }
 
+function auditIdExistsInSheet_(sheet, auditId) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2 || !auditId) { return false; }
+  // Revisa las últimas filas (suficiente contra reintentos recientes).
+  var start = Math.max(2, lastRow - 400);
+  var values = sheet.getRange(start, 1, lastRow, 1).getDisplayValues();
+  var i;
+  for (i = 0; i < values.length; i += 1) {
+    if (String(values[i][0] || "").trim() === auditId) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Convierte el arreglo de filas por defecto en un mapa de cantidades por columna.
  * Mal Pesado no consume Count: se guarda como texto "Peso ↑" / "Peso ↓".
@@ -457,9 +492,11 @@ function aggregateDetailedQtys_(rows) {
     "Golpe / Tallones": 0,
     "Calibre Revuelto": 0,
     "Colores Mixtos": 0,
+    "Calidades Revueltas": 0,
     "Mal Acomodo": 0,
     "Mal Envuelto": 0,
-    malPesadoText: ""
+    malPesadoText: "",
+    cajaMalaText: ""
   };
 
   var i;
@@ -474,6 +511,10 @@ function aggregateDetailedQtys_(rows) {
     }
     if (name === "Mal Pesado") {
       map.malPesadoText = r.malPesado || r.variante || "Sí";
+      continue;
+    }
+    if (name === "Caja Mala") {
+      map.cajaMalaText = r.cajaMala || r.variante || r.malPesado || "Sí";
       continue;
     }
     if (Object.prototype.hasOwnProperty.call(map, name)) {
@@ -587,6 +628,10 @@ function ensureDetailedRawSheet_() {
 
 function appendDetailedRawRow_(dataRow, shiftName, calidad, supervisor) {
   var sheet = ensureDetailedRawSheet_();
+  var auditId = String((dataRow && dataRow[0]) || "").trim();
+  if (auditId && auditIdExistsInSheet_(sheet, auditId)) {
+    return;
+  }
   var row = (dataRow || []).slice();
   row.push(shiftName || "");
   row.push(calidad || "");
@@ -618,7 +663,7 @@ function migrarInspeccionesBruto() {
   var currentSupervisor = "";
   var currentCalidad = "";
   var i;
-  var coreWidth = 14; // hasta Mal Pesado
+  var coreWidth = 16; // hasta Caja Mala (sin Turno/Calidad/Supervisor)
 
   for (i = 0; i < values.length; i += 1) {
     var row = values[i];
@@ -643,8 +688,8 @@ function migrarInspeccionesBruto() {
     if (rawRow[1] instanceof Date) {
       rawRow[1] = formatTimestamp_(rawRow[1].toISOString());
     }
-    var rowCalidad = String(row[14] || "").trim() || currentCalidad;
-    var rowSupervisor = String(row[15] || "").trim() || currentSupervisor;
+    var rowCalidad = String(row[16] || row[14] || "").trim() || currentCalidad;
+    var rowSupervisor = String(row[17] || row[15] || "").trim() || currentSupervisor;
     rawRow.push(currentShift);
     rawRow.push(rowCalidad);
     rawRow.push(rowSupervisor);
@@ -828,6 +873,7 @@ function sendFinalShiftReport_(payload) {
     shiftStartedAt: payload.shiftStartedAt || active.shiftStartedAtIso || "",
     shiftName: payload.shiftName || active.shiftName || "",
     supervisor: payload.supervisor || payload._supervisorFromToken || active.supervisor || "",
+    calidad: payload.calidad || active.calidad || "",
     operationalDay: payload.operationalDay || active.operationalDay || getOperationalDayKey_(new Date()),
     hoursBack: 0,
     sinceShiftStart: true,
@@ -875,7 +921,9 @@ var REPORT_DEFECT_COLS = [
   "Golpe / Tallones",
   "Colores Mixtos",
   "Calibre Revuelto",
-  "Mal Pesado"
+  "Calidades Revueltas",
+  "Mal Pesado",
+  "Caja Mala"
 ];
 
 function handleSendReport_(payload) {
@@ -886,6 +934,7 @@ function handleSendReport_(payload) {
     shiftStartedAt: payload.shiftStartedAt || active.shiftStartedAtIso || "",
     shiftName: payload.shiftName || active.shiftName || "",
     supervisor: payload.supervisor || payload._supervisorFromToken || active.supervisor || "",
+    calidad: payload.calidad || active.calidad || "",
     operationalDay: payload.operationalDay || active.operationalDay || getOperationalDayKey_(new Date()),
     hoursBack: 0,
     sinceShiftStart: true,
@@ -929,6 +978,7 @@ function sendScheduledReport() {
     shiftStartedAt: active.shiftStartedAtIso || "",
     shiftName: active.shiftName || "",
     supervisor: active.supervisor || "",
+    calidad: active.calidad || "",
     operationalDay: active.operationalDay || getOperationalDayKey_(new Date()),
     hoursBack: 0,
     sinceShiftStart: Boolean(active.shiftStartedAtIso),
@@ -1078,10 +1128,10 @@ function findActiveDetailedShift_() {
     return { active: false };
   }
   var width = HEADERS.detailed.length;
-  var values = sheet.getRange(2, 1, lastRow, Math.min(width, 6)).getValues();
+  var values = sheet.getRange(2, 1, lastRow, Math.min(width, 7)).getValues();
   var lastOpenRow = -1;
   var lastCloseRow = -1;
-  var openMeta = { supervisor: "", shiftName: "", operationalDay: "", timestamp: "" };
+  var openMeta = { supervisor: "", calidad: "", shiftName: "", operationalDay: "", timestamp: "" };
   var i;
   for (i = 0; i < values.length; i += 1) {
     var first = String(values[i][0] || "");
@@ -1091,6 +1141,7 @@ function findActiveDetailedShift_() {
       openMeta.timestamp = values[i][2];
       openMeta.operationalDay = String(values[i][4] || "").replace(/^Día operativo:\s*/i, "");
       openMeta.shiftName = String(values[i][5] || "").replace(/^Turno:\s*/i, "");
+      openMeta.calidad = String(values[i][6] || "").replace(/^Calidad:\s*/i, "");
     }
     if (first.indexOf("CIERRE DE TURNO") !== -1) {
       lastCloseRow = i + 2;
@@ -1113,6 +1164,7 @@ function findActiveDetailedShift_() {
     active: true,
     startRow: lastOpenRow,
     supervisor: openMeta.supervisor,
+    calidad: openMeta.calidad || "",
     shiftName: openMeta.shiftName,
     operationalDay: openMeta.operationalDay || getOperationalDayKey_(new Date()),
     shiftStartedAtIso: shiftStartedAtIso
@@ -1138,6 +1190,9 @@ function buildPackerReport_(options) {
   var sheet = ensureDetailedSheet_();
   var lastRow = sheet.getLastRow();
   var headers = HEADERS.detailed;
+  var actualHeaders = sheet.getRange(1, 1, 1, Math.max(headers.length, sheet.getLastColumn() || 1)).getDisplayValues()[0];
+  var hasNewCols = actualHeaders.indexOf("Calidades Revueltas") !== -1 ||
+    actualHeaders.indexOf("Caja Mala") !== -1;
   var map = {};
   var totalBoxes = 0;
   var totalAudits = 0;
@@ -1157,7 +1212,8 @@ function buildPackerReport_(options) {
   }
 
   if (lastRow >= 2) {
-    var values = sheet.getRange(2, 1, lastRow, headers.length).getValues();
+    var colCount = Math.max(headers.length, actualHeaders.length, 14);
+    var values = sheet.getRange(2, 1, lastRow, colCount).getValues();
     var r;
     for (r = 0; r < values.length; r += 1) {
       var sheetRow = r + 2;
@@ -1191,9 +1247,12 @@ function buildPackerReport_(options) {
       var malEnvuelto = Number(row[10]) || 0;
       var colores = Number(row[11]) || 0;
       var calibre = Number(row[12]) || 0;
-      var malPesadoText = String(row[13] || "").trim();
+      var calidadesRev = hasNewCols ? (Number(row[13]) || 0) : 0;
+      var malPesadoText = String(hasNewCols ? row[14] : row[13] || "").trim();
       var malPesado = malPesadoText ? 1 : 0;
-      var hasDeviation = assigned > 0 || malPesado > 0;
+      var cajaMalaText = hasNewCols ? String(row[15] || "").trim() : "";
+      var cajaMala = cajaMalaText ? 1 : 0;
+      var hasDeviation = assigned > 0 || malPesado > 0 || cajaMala > 0;
 
       if (!map[code]) {
         map[code] = {
@@ -1209,7 +1268,9 @@ function buildPackerReport_(options) {
           "Golpe / Tallones": 0,
           "Colores Mixtos": 0,
           "Calibre Revuelto": 0,
-          "Mal Pesado": 0
+          "Calidades Revueltas": 0,
+          "Mal Pesado": 0,
+          "Caja Mala": 0
         };
       }
 
@@ -1218,15 +1279,17 @@ function buildPackerReport_(options) {
       item.boxes += 1;
       totalAudits += 1;
       item.countTotal += count;
-      // DESV = papayas con defecto + Mal Pesado (vale 1 por caja).
-      item.desv += assigned + malPesado;
+      // DESV = papayas con defecto + Mal Pesado + Caja Mala (1 por caja).
+      item.desv += assigned + malPesado + cajaMala;
       item["Golpe / Tallones"] += tallones;
       item["Mal Acomodo"] += malAcomodo;
       item["Pudrición"] += pudricion;
       item["Mal Envuelto"] += malEnvuelto;
       item["Colores Mixtos"] += colores;
       item["Calibre Revuelto"] += calibre;
+      item["Calidades Revueltas"] += calidadesRev;
       item["Mal Pesado"] += malPesado;
+      item["Caja Mala"] += cajaMala;
       if (hasDeviation) {
         item.boxesWithDev += 1;
         totalBoxes += 1;
@@ -1242,7 +1305,9 @@ function buildPackerReport_(options) {
     "Golpe / Tallones": 0,
     "Colores Mixtos": 0,
     "Calibre Revuelto": 0,
-    "Mal Pesado": 0
+    "Calidades Revueltas": 0,
+    "Mal Pesado": 0,
+    "Caja Mala": 0
   };
 
   Object.keys(map).forEach(function (code) {
@@ -1264,7 +1329,9 @@ function buildPackerReport_(options) {
         "Golpe / Tallones": item["Golpe / Tallones"],
         "Colores Mixtos": item["Colores Mixtos"],
         "Calibre Revuelto": item["Calibre Revuelto"],
-        "Mal Pesado": item["Mal Pesado"]
+        "Calidades Revueltas": item["Calidades Revueltas"],
+        "Mal Pesado": item["Mal Pesado"],
+        "Caja Mala": item["Caja Mala"]
       }
     });
     defectTotalsMap["Mal Acomodo"] += item["Mal Acomodo"];
@@ -1273,7 +1340,9 @@ function buildPackerReport_(options) {
     defectTotalsMap["Golpe / Tallones"] += item["Golpe / Tallones"];
     defectTotalsMap["Colores Mixtos"] += item["Colores Mixtos"];
     defectTotalsMap["Calibre Revuelto"] += item["Calibre Revuelto"];
+    defectTotalsMap["Calidades Revueltas"] += item["Calidades Revueltas"];
     defectTotalsMap["Mal Pesado"] += item["Mal Pesado"];
+    defectTotalsMap["Caja Mala"] += item["Caja Mala"];
   });
 
   var defectTotals = [];
@@ -1291,6 +1360,7 @@ function buildPackerReport_(options) {
     operationalDay: options.operationalDay || "",
     shiftName: options.shiftName || "",
     supervisor: options.supervisor || "",
+    calidad: options.calidad || "",
     windowLabel: "Acumulado desde inicio de turno" +
       (options.shiftStartedAt ? " (" + formatTimestamp_(options.shiftStartedAt) + ")" : ""),
     totalBoxes: totalBoxes,
@@ -1414,7 +1484,9 @@ function buildReportHtml_(report) {
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Golpe / Tallones"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Colores Mixtos"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Calibre Revuelto"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Calidades Revueltas"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Pesado"]) + "</td>" +
+      "<td style='text-align:right;'>" + fmtDef_(r.defects["Caja Mala"]) + "</td>" +
       "</tr>";
   }
 
@@ -1422,17 +1494,18 @@ function buildReportHtml_(report) {
     cajasRows = "<tr><td colspan='3'>Sin registros en el turno.</td></tr>";
     defectTypeRows = "<tr><td colspan='2'>Sin registros en el turno.</td></tr>";
     summaryRows = "<tr><td colspan='5'>Sin registros en el turno.</td></tr>";
-    defectRows = "<tr><td colspan='12'>Sin registros en el turno.</td></tr>";
+    defectRows = "<tr><td colspan='14'>Sin registros en el turno.</td></tr>";
   }
 
   return (
     "<div style='font-family:Arial,sans-serif;color:#111;'>" +
     "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
-    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v14 · Acumulado del turno</p>" +
+    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v15 · Acumulado del turno</p>" +
     "<p style='margin:0 0 16px;color:#444;'>" +
     "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
     "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
     "Turno: <b>" + esc_(report.shiftName || "—") + "</b><br>" +
+    "Calidad: <b>" + esc_(report.calidad || "—") + "</b><br>" +
     "Supervisor: <b>" + esc_(report.supervisor || "—") + "</b><br>" +
     "Ventana: <b>" + esc_(report.windowLabel) + "</b>" +
     "</p>" +
@@ -1466,7 +1539,8 @@ function buildReportHtml_(report) {
     "<tr style='background:#f3f4f6;'>" +
     "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>COUNT T.</th><th>DESV</th>" +
     "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Golpe / Tallones</th>" +
-    "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Mal Pesado</th>" +
+    "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Calidades Revueltas</th>" +
+    "<th>Mal Pesado</th><th>Caja Mala</th>" +
     "</tr>" +
     defectRows +
     "</table>" +
