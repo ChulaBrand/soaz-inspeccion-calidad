@@ -124,8 +124,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v15",
-        message: "API activa. v15: Calidades Revueltas, Caja Mala, anti-duplicados, Calidad en reporte."
+        version: "report-v16",
+        message: "API activa. v16: lock anti-duplicados, reportes sin filas repetidas."
       };
     }
     return respond_(e, result);
@@ -415,63 +415,70 @@ function handleRegisterSimple_(payload) {
  * ========================================================================= */
 
 function handleRegisterDetailed_(payload) {
-  var sheet = ensureDetailedSheet_();
-  var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
-  var auditId = String(payload.auditId || "").trim();
+  // Lock: evita carrera cuando el cliente hace timeout y reintenta mientras
+  // la primera petición aún está escribiendo la misma auditoría.
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    var sheet = ensureDetailedSheet_();
+    var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
+    var auditId = String(payload.auditId || "").trim();
 
-  // Evita filas duplicadas si el cliente reintenta / hace timeout.
-  if (auditId && auditIdExistsInSheet_(sheet, auditId)) {
-    return {
-      ok: true,
-      action: "register_detailed_inspection",
-      operationalDay: operationalDay,
-      rows: 0,
-      duplicate: true
-    };
+    if (auditId && auditIdExistsInSheet_(sheet, auditId)) {
+      return {
+        ok: true,
+        action: "register_detailed_inspection",
+        operationalDay: operationalDay,
+        rows: 0,
+        duplicate: true
+      };
+    }
+
+    var qtyByDefect = aggregateDetailedQtys_(payload.rows || []);
+    var malPesado = qtyByDefect.malPesadoText || "";
+    var cajaMala = qtyByDefect.cajaMalaText || "";
+    var supervisor = payload.supervisor || payload._supervisorFromToken || "";
+    var calidad = String(payload.calidad || "").trim();
+    var shiftName = payload.shiftName || "";
+
+    var coreRow = [
+      auditId,
+      formatTimestamp_(payload.timestamp),
+      payload.packerCode || "",
+      payload.packerName || "",
+      payload.count != null ? payload.count : "",
+      payload.assigned != null ? payload.assigned : 0,
+      payload.buenas != null ? payload.buenas : "",
+      qtyByDefect["Golpe / Tallones"] || qtyByDefect["Golpe"] || 0,
+      qtyByDefect["Mal Acomodo"] || 0,
+      qtyByDefect["Pudrición"] || 0,
+      qtyByDefect["Mal Envuelto"] || 0,
+      qtyByDefect["Colores Mixtos"] || 0,
+      qtyByDefect["Calibre Revuelto"] || 0,
+      qtyByDefect["Calidades Revueltas"] || 0,
+      malPesado,
+      cajaMala
+    ];
+
+    // Hoja detallada: defectos + Calidad + Supervisor.
+    sheet.appendRow(coreRow.concat([calidad, supervisor]));
+
+    // Hoja bruta: mismos defectos + Turno + Calidad + Supervisor.
+    appendDetailedRawRow_(coreRow, shiftName, calidad, supervisor);
+
+    bumpSummary_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
+
+    return { ok: true, action: "register_detailed_inspection", operationalDay: operationalDay, rows: 1 };
+  } finally {
+    lock.releaseLock();
   }
-
-  var qtyByDefect = aggregateDetailedQtys_(payload.rows || []);
-  var malPesado = qtyByDefect.malPesadoText || "";
-  var cajaMala = qtyByDefect.cajaMalaText || "";
-  var supervisor = payload.supervisor || payload._supervisorFromToken || "";
-  var calidad = String(payload.calidad || "").trim();
-  var shiftName = payload.shiftName || "";
-
-  var coreRow = [
-    auditId,
-    formatTimestamp_(payload.timestamp),
-    payload.packerCode || "",
-    payload.packerName || "",
-    payload.count != null ? payload.count : "",
-    payload.assigned != null ? payload.assigned : 0,
-    payload.buenas != null ? payload.buenas : "",
-    qtyByDefect["Golpe / Tallones"] || qtyByDefect["Golpe"] || 0,
-    qtyByDefect["Mal Acomodo"] || 0,
-    qtyByDefect["Pudrición"] || 0,
-    qtyByDefect["Mal Envuelto"] || 0,
-    qtyByDefect["Colores Mixtos"] || 0,
-    qtyByDefect["Calibre Revuelto"] || 0,
-    qtyByDefect["Calidades Revueltas"] || 0,
-    malPesado,
-    cajaMala
-  ];
-
-  // Hoja detallada: defectos + Calidad + Supervisor.
-  sheet.appendRow(coreRow.concat([calidad, supervisor]));
-
-  // Hoja bruta: mismos defectos + Turno + Calidad + Supervisor.
-  appendDetailedRawRow_(coreRow, shiftName, calidad, supervisor);
-
-  bumpSummary_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
-
-  return { ok: true, action: "register_detailed_inspection", operationalDay: operationalDay, rows: 1 };
 }
 
 function auditIdExistsInSheet_(sheet, auditId) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2 || !auditId) { return false; }
-  // Revisa las últimas filas (suficiente contra reintentos recientes).
-  var start = Math.max(2, lastRow - 400);
+  // Revisa un rango amplio: reintentos pueden llegar minutos después.
+  var start = Math.max(2, lastRow - 2500);
   var values = sheet.getRange(start, 1, lastRow, 1).getDisplayValues();
   var i;
   for (i = 0; i < values.length; i += 1) {
@@ -480,6 +487,47 @@ function auditIdExistsInSheet_(sheet, auditId) {
     }
   }
   return false;
+}
+
+/**
+ * Ejecutar UNA VEZ desde el editor para borrar filas duplicadas
+ * (mismo Audit ID) en Detalladas y Bruto, dejando solo la primera.
+ */
+function limpiarDuplicadosPorAuditId() {
+  var detailed = ensureDetailedSheet_();
+  var raw = ensureDetailedRawSheet_();
+  var d = removeDuplicateAuditRows_(detailed);
+  var r = removeDuplicateAuditRows_(raw);
+  return "Detalladas: eliminadas " + d + " filas. Bruto: eliminadas " + r + " filas.";
+}
+
+function removeDuplicateAuditRows_(sheet) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return 0; }
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var values = sheet.getRange(2, 1, lastRow, lastCol).getValues();
+  var seen = {};
+  var keep = [];
+  var removed = 0;
+  var i;
+  for (i = 0; i < values.length; i += 1) {
+    var auditId = String(values[i][0] || "").trim();
+    var isMarker = auditId.indexOf("CAMBIO DE TURNO") !== -1 || auditId.indexOf("CIERRE DE TURNO") !== -1;
+    if (!isMarker && auditId && seen[auditId]) {
+      removed += 1;
+      continue;
+    }
+    if (!isMarker && auditId) {
+      seen[auditId] = true;
+    }
+    keep.push(values[i]);
+  }
+  if (removed === 0) { return 0; }
+  sheet.getRange(2, 1, lastRow, lastCol).clearContent();
+  if (keep.length > 0) {
+    sheet.getRange(2, 1, keep.length + 1, lastCol).setValues(keep);
+  }
+  return removed;
 }
 
 /**
@@ -1214,6 +1262,7 @@ function buildPackerReport_(options) {
   if (lastRow >= 2) {
     var colCount = Math.max(headers.length, actualHeaders.length, 14);
     var values = sheet.getRange(2, 1, lastRow, colCount).getValues();
+    var seenAuditIds = {};
     var r;
     for (r = 0; r < values.length; r += 1) {
       var sheetRow = r + 2;
@@ -1227,6 +1276,13 @@ function buildPackerReport_(options) {
       }
       if (!String(row[2] || "").trim()) {
         continue;
+      }
+      // Si hay filas repetidas del mismo Audit ID, cuenta solo la primera.
+      if (first && seenAuditIds[first]) {
+        continue;
+      }
+      if (first) {
+        seenAuditIds[first] = true;
       }
 
       var tsMs = parseSheetTimestampMs_(row[1]);

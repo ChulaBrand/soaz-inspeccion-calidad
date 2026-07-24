@@ -856,8 +856,8 @@
     <!-- 2. EMPACADORES -->
     <main id="screenPackers" class="screen">
       <section class="panel">
-        <h1 class="panel-title">Empacadores del Turno</h1>
-        <p class="panel-desc">Selecciona quién trabaja en este turno. El catálogo es compartido entre todos los dispositivos.</p>
+        <h1 class="panel-title" id="packersPanelTitle">Empacadores del Turno</h1>
+        <p class="panel-desc" id="packersPanelDesc">Selecciona quién trabaja en este turno. El catálogo es compartido entre todos los dispositivos.</p>
 
         <div class="toolbar-row">
           <button class="btn btn-secondary" type="button" id="btnToggleAddPacker">Agregar Nuevo Empacador</button>
@@ -1003,6 +1003,7 @@
   </button>
   <div class="gear-menu" id="gearMenu" role="menu">
     <button type="button" id="menuSendReport" role="menuitem">Enviar reporte</button>
+    <button type="button" id="menuManagePackers" role="menuitem">Empacadores del turno</button>
     <button type="button" id="menuManageEmails" role="menuitem">Agregar correos (reporte y alertas)</button>
     <button type="button" id="menuManageCalidad" role="menuitem">Administrar nombres de Calidad</button>
     <button type="button" id="menuManageSupervisor" role="menuitem">Administrar nombres de Supervisor</button>
@@ -1103,7 +1104,7 @@
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbzxVYpYwX-A_L5rLaeGEt4vHHqlk_6ZC5HhACLClHIsLi4rH7zltgEUHS-F0YoLCWyr/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbypl1iAm9R1GWrl8I2g4TTo5kufYIqSHNZM599f_a9aqaGfJutMqxQueRNU8A5pGNMD/exec",
         reportEmails: ["antoniozm007@gmail.com"],
         calidadNames: ["MICAELA P.", "YOLANDA C.", "KARLA S.", "MARIA R.", "GRACIELA C."],
         supervisorNames: ["YURIDIA M.", "FERNANDO B.", "MARIO S.", "EMANUEL G."],
@@ -1178,6 +1179,7 @@
         packerSelectSearchQuery: "",
         packerSelectSearchMode: "both",
         shiftMarkerSent: false,
+        packersMidShift: false,
         ui: { expandedDefect: null, editingDefect: null, pendingVariant: null }
       };
 
@@ -1264,7 +1266,8 @@
         var show = Boolean(state.token) &&
           (screenId === "screenCount" || screenId === "screenDetailed" ||
            screenId === "screenBoard" || screenId === "screenPackerSelect" ||
-           screenId === "screenFlow");
+           screenId === "screenFlow" ||
+           (screenId === "screenPackers" && state.packersMidShift));
         if (show) { dom.btnGearMenu.classList.add("visible"); }
         else { dom.btnGearMenu.classList.remove("visible"); }
       }
@@ -1717,6 +1720,7 @@
         state.emailsEditPassword = "";
         state.pendingConfigAction = null;
         state.shiftMarkerSent = false;
+        state.packersMidShift = false;
         state.ui = { expandedDefect: null, editingDefect: null, pendingVariant: null };
         localStorage.removeItem(CONFIG.storageKeys.shiftDraft);
         localStorage.removeItem(CONFIG.storageKeys.token);
@@ -2588,6 +2592,9 @@
         sendToApi(record).then(function () {
           showToast(hasDefect ? ("Auditoría guardada · " + packerCode) : ("Caja sin defectos · " + packerCode), "success");
         }).catch(function () {
+          // Espera un poco antes de reintentar: da tiempo a que termine
+          // la petición original que provocó el timeout.
+          record.retryAfter = Date.now() + 60000;
           enqueuePendingUnique(record);
           showToast("Auditoría en cola local · " + packerCode, "info");
         }).finally(function () {
@@ -2608,6 +2615,21 @@
         if (exists) { return; }
         state.pendingQueue.push(record);
         savePendingQueue();
+      }
+
+      function removePendingByKeys(record) {
+        if (!record || state.pendingQueue.length === 0) { return; }
+        var auditId = String(record.auditId || "").trim();
+        var recordId = String(record.recordId || "").trim();
+        var before = state.pendingQueue.length;
+        state.pendingQueue = state.pendingQueue.filter(function (item) {
+          if (auditId && item.auditId === auditId) { return false; }
+          if (recordId && item.recordId === recordId) { return false; }
+          return true;
+        });
+        if (state.pendingQueue.length !== before) {
+          savePendingQueue();
+        }
       }
 
       function lockPackerButtons() {
@@ -2633,12 +2655,24 @@
           var cbName = "soazJsonp_" + Date.now() + "_" + Math.floor(Math.random() * 1000000);
           var script = document.createElement("script");
           var settled = false;
+          var softTimedOut = false;
+          var isRegister = payload && payload.action && String(payload.action).indexOf("register_") === 0;
+          var timeoutMs = isRegister ? 45000 : 20000;
 
           var timer = window.setTimeout(function () {
             if (settled) { return; }
-            settled = true; cleanup();
+            // Soft timeout: marca fallo para UX/cola, pero sigue escuchando
+            // por si la respuesta llega tarde (evita reenviar y duplicar).
+            softTimedOut = true;
             reject(new Error("Timeout al contactar Google Sheets"));
-          }, payload && payload.action && String(payload.action).indexOf("register_") === 0 ? 45000 : 20000);
+            // Limpieza dura si nunca llega respuesta.
+            window.setTimeout(function () {
+              if (!settled) {
+                settled = true;
+                cleanup();
+              }
+            }, 90000);
+          }, timeoutMs);
 
           function cleanup() {
             window.clearTimeout(timer);
@@ -2648,7 +2682,17 @@
 
           window[cbName] = function (data) {
             if (settled) { return; }
-            settled = true; cleanup();
+            if (softTimedOut) {
+              // Llegó tarde: si el servidor ya guardó, saca el ítem de la cola.
+              settled = true;
+              cleanup();
+              if (data && data.ok !== false) {
+                removePendingByKeys(payload);
+              }
+              return;
+            }
+            settled = true;
+            cleanup();
             if (data && data.ok === false && data.error === "Sesión inválida o expirada") {
               handleSessionExpired();
               reject(new Error(data.error));
@@ -2662,7 +2706,7 @@
           };
 
           script.onerror = function () {
-            if (settled) { return; }
+            if (settled || softTimedOut) { return; }
             settled = true; cleanup();
             reject(new Error("No se pudo conectar con Google Sheets"));
           };
@@ -2735,25 +2779,48 @@
 
         state.isSyncing = true;
         setConnectionStatus("syncing");
-        var queueCopy = state.pendingQueue.slice();
+        var now = Date.now();
+        // No reenvía registros en cooldown (timeout reciente).
+        var queueCopy = state.pendingQueue.filter(function (item) {
+          return !item.retryAfter || item.retryAfter <= now;
+        });
+        if (queueCopy.length === 0) {
+          state.isSyncing = false;
+          setConnectionStatus("online");
+          updateSyncBanner();
+          return;
+        }
         var index = 0, sentCount = 0;
 
         function processNext() {
           if (index >= queueCopy.length) {
-            state.pendingQueue = [];
+            // Conserva solo los que aún están en cooldown o fallaron.
+            var remainingIds = {};
+            for (var q = 0; q < state.pendingQueue.length; q += 1) {
+              var pending = state.pendingQueue[q];
+              if (pending.retryAfter && pending.retryAfter > Date.now()) {
+                remainingIds[String(pending.auditId || pending.recordId || q)] = pending;
+              }
+            }
+            state.pendingQueue = Object.keys(remainingIds).map(function (k) { return remainingIds[k]; });
             savePendingQueue();
             state.isSyncing = false;
             setConnectionStatus("online");
             if (sentCount > 0) { showToast("Cola enviada a Google Sheets (" + sentCount + ").", "success"); }
+            updateSyncBanner();
             return;
           }
-          sendToApi(queueCopy[index]).then(function () {
-            sentCount += 1; index += 1; processNext();
+          var current = queueCopy[index];
+          sendToApi(current).then(function () {
+            sentCount += 1;
+            removePendingByKeys(current);
+            index += 1;
+            processNext();
           }).catch(function (error) {
-            state.pendingQueue = queueCopy.slice(index);
-            savePendingQueue();
+            // Deja el resto (incl. current) en cola.
             state.isSyncing = false;
             setConnectionStatus("offline");
+            updateSyncBanner();
             showToast("Sincronización detenida: " + (error && error.message ? error.message : "error de red"), "error");
           });
         }
@@ -2802,12 +2869,14 @@
           state.currentFlow = null;
           state.currentAudit = null;
           state.shiftMarkerSent = false;
+          state.packersMidShift = false;
           state.packerSearchQuery = "";
           if (dom.packerSearchInput) { dom.packerSearchInput.value = ""; }
           localStorage.setItem(CONFIG.storageKeys.token, state.token);
           dom.password.value = "";
           saveShiftDraft();
           updateHeader();
+          updatePackersScreenMode(false);
           showScreen("screenPackers");
           renderPackerManageList();
           refreshPackersFromCloud(true);
@@ -2820,15 +2889,63 @@
         });
       }
 
+      function updatePackersScreenMode(midShift) {
+        state.packersMidShift = Boolean(midShift);
+        if (dom.packersPanelTitle) {
+          dom.packersPanelTitle.textContent = midShift ? "Empacadores del turno" : "Empacadores del Turno";
+        }
+        if (dom.packersPanelDesc) {
+          dom.packersPanelDesc.textContent = midShift
+            ? "Agrega o marca empacadores que llegaron después. Al terminar, vuelve al turno sin cerrarlo."
+            : "Selecciona quién trabaja en este turno. El catálogo es compartido entre todos los dispositivos.";
+        }
+        if (dom.btnConfirmPackers) {
+          dom.btnConfirmPackers.textContent = midShift ? "Guardar y volver al turno" : "Confirmar e Iniciar";
+        }
+      }
+
+      function openPackersFromGear() {
+        if (!state.token) {
+          showToast("Inicia sesión para administrar empacadores.", "error");
+          return;
+        }
+        closeGearMenu();
+        updatePackersScreenMode(true);
+        state.packerSearchQuery = "";
+        if (dom.packerSearchInput) { dom.packerSearchInput.value = ""; }
+        showScreen("screenPackers");
+        renderPackerManageList();
+        refreshPackersFromCloud(false);
+        showToast("Puedes agregar o activar empacadores sin cerrar el turno.", "info");
+      }
+
       function handleConfirmPackers() {
         dedupeActivePackerCodes();
         if (getActivePackers().length === 0) { showToast("Selecciona al menos un empacador activo.", "error"); return; }
         saveShiftDraft();
         updateHeader();
 
-        if (state.detailedMode) { startNewBox(); }
-        else { renderDefectButtons(); showScreen("screenBoard"); }
-        showToast("Turno iniciado. Modo " + (state.detailedMode ? "detallado" : "simple") + ".", "success");
+        var returningMidShift = state.packersMidShift;
+        updatePackersScreenMode(false);
+
+        if (state.detailedMode) {
+          if (!state.currentAudit) { startNewBox(); }
+          else {
+            renderCountGrid();
+            showScreen(state.currentAudit.count != null ? "screenDetailed" : "screenCount");
+            if (state.currentAudit.count != null) { renderDetailedScreen(); }
+          }
+        } else {
+          renderDefectButtons();
+          showScreen("screenBoard");
+        }
+
+        showToast(
+          returningMidShift
+            ? ("Empacadores actualizados (" + getActivePackers().length + ").")
+            : ("Turno iniciado. Modo " + (state.detailedMode ? "detallado" : "simple") + "."),
+          "success"
+        );
 
         if (!state.shiftMarkerSent) {
           apiRequest({
@@ -3019,6 +3136,9 @@
         if (dom.menuSendReport) {
           dom.menuSendReport.addEventListener("click", handleSendReport);
         }
+        if (dom.menuManagePackers) {
+          dom.menuManagePackers.addEventListener("click", openPackersFromGear);
+        }
         if (dom.menuManageEmails) {
           dom.menuManageEmails.addEventListener("click", openEmailsPasswordModal);
         }
@@ -3179,12 +3299,15 @@
         dom.btnSaveNewPacker = byId("btnSaveNewPacker");
         dom.btnCancelAddPacker = byId("btnCancelAddPacker");
         dom.btnConfirmPackers = byId("btnConfirmPackers");
+        dom.packersPanelTitle = byId("packersPanelTitle");
+        dom.packersPanelDesc = byId("packersPanelDesc");
         dom.defectButtons = byId("defectButtons");
         dom.btnCloseShiftSimple = byId("btnCloseShiftSimple");
         dom.btnCloseShiftDetailed = byId("btnCloseShiftDetailed");
         dom.btnGearMenu = byId("btnGearMenu");
         dom.gearMenu = byId("gearMenu");
         dom.menuSendReport = byId("menuSendReport");
+        dom.menuManagePackers = byId("menuManagePackers");
         dom.menuManageEmails = byId("menuManageEmails");
         dom.menuManageCalidad = byId("menuManageCalidad");
         dom.menuManageSupervisor = byId("menuManageSupervisor");
