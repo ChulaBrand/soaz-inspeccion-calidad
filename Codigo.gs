@@ -124,8 +124,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v16",
-        message: "API activa. v16: lock anti-duplicados, reportes sin filas repetidas."
+        version: "report-v18",
+        message: "API activa. v18: anti-duplicados en cierre/apertura de turno."
       };
     }
     return respond_(e, result);
@@ -237,8 +237,26 @@ function handleAuthenticate_(payload) {
     return { ok: false, error: "Contraseña incorrecta" };
   }
 
-  var token = createSession_(supervisor);
-  return { ok: true, token: token, supervisor: supervisor, calidad: calidad };
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(15000);
+  try {
+    // Reutiliza sesión vigente del mismo supervisor (evita filas duplicadas
+    // por doble click / reintento de login).
+    var existing = findValidSessionForSupervisor_(supervisor);
+    if (existing) {
+      return {
+        ok: true,
+        token: existing.token,
+        supervisor: supervisor,
+        calidad: calidad,
+        reusedSession: true
+      };
+    }
+    var token = createSession_(supervisor);
+    return { ok: true, token: token, supervisor: supervisor, calidad: calidad };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function createSession_(supervisor) {
@@ -248,6 +266,32 @@ function createSession_(supervisor) {
   var token = "session_" + now.getTime() + "_" + Math.random().toString(36).slice(2, 8);
   sheet.appendRow([token, supervisor, now, expires]);
   return token;
+}
+
+function findValidSessionForSupervisor_(supervisor) {
+  var sheet = getOrCreateSheet_(CONFIG.SHEET_SESSIONS, HEADERS.sessions);
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return null;
+  }
+  var values = sheet.getRange(2, 1, lastRow, 4).getValues();
+  var now = new Date().getTime();
+  var want = String(supervisor || "").trim().toLowerCase();
+  var i;
+  // Busca de más reciente a más antigua.
+  for (i = values.length - 1; i >= 0; i -= 1) {
+    var token = String(values[i][0] || "").trim();
+    var name = String(values[i][1] || "").trim().toLowerCase();
+    if (!token || name !== want) {
+      continue;
+    }
+    var expires = values[i][3];
+    var expiresMs = expires instanceof Date ? expires.getTime() : new Date(expires).getTime();
+    if (!isNaN(expiresMs) && expiresMs > now) {
+      return { token: token, supervisor: String(values[i][1] || "") };
+    }
+  }
+  return null;
 }
 
 function validateToken_(token) {
@@ -260,7 +304,7 @@ function validateToken_(token) {
   if (lastRow < 2) {
     return { ok: false };
   }
-  var values = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
+  var values = sheet.getRange(2, 1, lastRow, 4).getValues();
   var now = new Date().getTime();
   var i;
   for (i = 0; i < values.length; i += 1) {
@@ -389,24 +433,40 @@ function handleDeletePacker_(payload) {
  * ========================================================================= */
 
 function handleRegisterSimple_(payload) {
-  var sheet = getOrCreateSheet_(CONFIG.SHEET_SIMPLE, HEADERS.simple);
-  var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    var sheet = getOrCreateSheet_(CONFIG.SHEET_SIMPLE, HEADERS.simple);
+    var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
+    var recordId = String(payload.recordId || "").trim();
 
-  sheet.appendRow([
-    formatTimestamp_(payload.timestamp),
-    operationalDay,
-    payload.shiftStartedAt || "",
-    payload.supervisor || payload._supervisorFromToken || "",
-    payload.packerCode || "",
-    payload.packerName || "",
-    payload.defectLabel || payload.defectId || "",
-    payload.detail || payload.summary || "",
-    payload.recordId || ""
-  ]);
+    if (recordId && recordIdExistsInSheet_(sheet, recordId, 9)) {
+      return {
+        ok: true,
+        action: "register_simple_inspection",
+        operationalDay: operationalDay,
+        duplicate: true
+      };
+    }
 
-  bumpSummary_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
+    sheet.appendRow([
+      formatTimestamp_(payload.timestamp),
+      operationalDay,
+      payload.shiftStartedAt || "",
+      payload.supervisor || payload._supervisorFromToken || "",
+      payload.packerCode || "",
+      payload.packerName || "",
+      payload.defectLabel || payload.defectId || "",
+      payload.detail || payload.summary || "",
+      recordId
+    ]);
 
-  return { ok: true, action: "register_simple_inspection", operationalDay: operationalDay };
+    bumpSummaryCore_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
+
+    return { ok: true, action: "register_simple_inspection", operationalDay: operationalDay };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* =========================================================================
@@ -466,7 +526,7 @@ function handleRegisterDetailed_(payload) {
     // Hoja bruta: mismos defectos + Turno + Calidad + Supervisor.
     appendDetailedRawRow_(coreRow, shiftName, calidad, supervisor);
 
-    bumpSummary_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
+    bumpSummaryCore_(operationalDay, payload.packerCode, payload.packerName, payload.countsAsError);
 
     return { ok: true, action: "register_detailed_inspection", operationalDay: operationalDay, rows: 1 };
   } finally {
@@ -755,34 +815,74 @@ function migrarInspeccionesBruto() {
  * ========================================================================= */
 
 function bumpSummary_(operationalDay, packerCode, packerName, countsAsError) {
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    bumpSummaryCore_(operationalDay, packerCode, packerName, countsAsError);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function bumpSummaryCore_(operationalDay, packerCode, packerName, countsAsError) {
   if (!countsAsError || !packerCode) {
     return;
   }
   var sheet = getOrCreateSheet_(CONFIG.SHEET_SUMMARY, HEADERS.summary);
   var code = String(packerCode).trim().toUpperCase();
+  var day = String(operationalDay || "").trim();
   var lastRow = sheet.getLastRow();
-  var foundRow = -1;
+  var matchRows = [];
 
   if (lastRow >= 2) {
-    var values = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+    var values = sheet.getRange(2, 1, lastRow, 4).getValues();
     var i;
     for (i = 0; i < values.length; i += 1) {
-      if (String(values[i][0]).trim() === String(operationalDay).trim() &&
+      if (String(values[i][0]).trim() === day &&
           String(values[i][1]).trim().toUpperCase() === code) {
-        foundRow = i + 2;
-        break;
+        matchRows.push({
+          row: i + 2,
+          errors: Number(values[i][3]) || 0
+        });
       }
     }
   }
 
   var now = formatTimestamp_(new Date().toISOString());
-  if (foundRow > 0) {
-    var current = Number(sheet.getRange(foundRow, 4).getValue()) || 0;
-    sheet.getRange(foundRow, 4).setValue(current + 1);
-    sheet.getRange(foundRow, 5).setValue(now);
-  } else {
-    sheet.appendRow([operationalDay, code, packerName || "", 1, now]);
+
+  // Si ya había filas duplicadas del mismo día+código, consolida en la primera.
+  if (matchRows.length > 0) {
+    var primary = matchRows[0];
+    var total = primary.errors + 1;
+    var d;
+    for (d = 1; d < matchRows.length; d += 1) {
+      total += matchRows[d].errors;
+    }
+    sheet.getRange(primary.row, 3).setValue(packerName || "");
+    sheet.getRange(primary.row, 4).setValue(total);
+    sheet.getRange(primary.row, 5).setValue(now);
+    for (d = matchRows.length - 1; d >= 1; d -= 1) {
+      sheet.deleteRow(matchRows[d].row);
+    }
+    return;
   }
+
+  sheet.appendRow([day, code, packerName || "", 1, now]);
+}
+
+function recordIdExistsInSheet_(sheet, recordId, colIndex) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2 || !recordId) { return false; }
+  var col = colIndex || 1;
+  var start = Math.max(2, lastRow - 2500);
+  var values = sheet.getRange(start, col, lastRow, col).getDisplayValues();
+  var i;
+  for (i = 0; i < values.length; i += 1) {
+    if (String(values[i][0] || "").trim() === recordId) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /* =========================================================================
@@ -790,48 +890,59 @@ function bumpSummary_(operationalDay, packerCode, packerName, countsAsError) {
  * ========================================================================= */
 
 function handleSendAlert_(payload) {
-  var sheet = getOrCreateSheet_(CONFIG.SHEET_ALERTS, HEADERS.alerts);
-  var errors = payload.errors || [];
-  var emails = resolveReportEmails_(payload.emails);
-  var supervisor = payload.supervisor || payload._supervisorFromToken || "";
-
-  sheet.appendRow([
-    formatTimestamp_(payload.timestamp),
-    payload.operationalDay || "",
-    supervisor,
-    payload.packerCode || "",
-    payload.packerName || "",
-    payload.mode || "",
-    errors[0] || "",
-    errors[1] || "",
-    errors[2] || "",
-    emails.join(", "),
-    payload.alertId || ""
-  ]);
-
-  var subject = "SOAZ ALERTA · 3 errores · Empacador " + (payload.packerCode || "");
-  var body =
-    "Alerta automática del Módulo de Inspección de Calidad SOAZ\n\n" +
-    "Supervisor: " + (supervisor || "—") + "\n" +
-    "Día operativo: " + (payload.operationalDay || "—") + "\n" +
-    "Modo: " + (payload.mode || "—") + "\n" +
-    "Empacador: " + (payload.packerCode || "—") + " (" + (payload.packerName || "—") + ")\n\n" +
-    "Registros con error:\n" +
-    "1. " + (errors[0] || "—") + "\n" +
-    "2. " + (errors[1] || "—") + "\n" +
-    "3. " + (errors[2] || "—") + "\n\n" +
-    "Alert ID: " + (payload.alertId || "—") + "\n";
-
-  var emailResult = { sent: false, detail: "" };
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
   try {
-    MailApp.sendEmail({ to: emails.join(","), subject: subject, body: body });
-    emailResult.sent = true;
-    emailResult.detail = "Email enviado";
-  } catch (mailError) {
-    emailResult.detail = errText_(mailError);
-  }
+    var sheet = getOrCreateSheet_(CONFIG.SHEET_ALERTS, HEADERS.alerts);
+    var alertId = String(payload.alertId || "").trim();
+    if (alertId && recordIdExistsInSheet_(sheet, alertId, 11)) {
+      return { ok: true, action: "send_alert", duplicate: true, email: { sent: false, detail: "Alerta ya registrada" } };
+    }
 
-  return { ok: true, action: "send_alert", email: emailResult };
+    var errors = payload.errors || [];
+    var emails = resolveReportEmails_(payload.emails);
+    var supervisor = payload.supervisor || payload._supervisorFromToken || "";
+
+    sheet.appendRow([
+      formatTimestamp_(payload.timestamp),
+      payload.operationalDay || "",
+      supervisor,
+      payload.packerCode || "",
+      payload.packerName || "",
+      payload.mode || "",
+      errors[0] || "",
+      errors[1] || "",
+      errors[2] || "",
+      emails.join(", "),
+      alertId
+    ]);
+
+    var subject = "SOAZ ALERTA · 3 errores · Empacador " + (payload.packerCode || "");
+    var body =
+      "Alerta automática del Módulo de Inspección de Calidad SOAZ\n\n" +
+      "Supervisor: " + (supervisor || "—") + "\n" +
+      "Día operativo: " + (payload.operationalDay || "—") + "\n" +
+      "Modo: " + (payload.mode || "—") + "\n" +
+      "Empacador: " + (payload.packerCode || "—") + " (" + (payload.packerName || "—") + ")\n\n" +
+      "Registros con error:\n" +
+      "1. " + (errors[0] || "—") + "\n" +
+      "2. " + (errors[1] || "—") + "\n" +
+      "3. " + (errors[2] || "—") + "\n\n" +
+      "Alert ID: " + (alertId || "—") + "\n";
+
+    var emailResult = { sent: false, detail: "" };
+    try {
+      MailApp.sendEmail({ to: emails.join(","), subject: subject, body: body });
+      emailResult.sent = true;
+      emailResult.detail = "Email enviado";
+    } catch (mailError) {
+      emailResult.detail = errText_(mailError);
+    }
+
+    return { ok: true, action: "send_alert", email: emailResult };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* =========================================================================
@@ -845,46 +956,65 @@ function shiftSheetFor_(mode) {
 }
 
 function handleOpenShift_(payload) {
-  var mode = payload.mode === "detailed" ? "detailed" : "simple";
-  var sheet = shiftSheetFor_(mode);
-  var width = mode === "detailed" ? HEADERS.detailed.length : HEADERS.simple.length;
-  var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    var mode = payload.mode === "detailed" ? "detailed" : "simple";
+    var sheet = shiftSheetFor_(mode);
+    var width = mode === "detailed" ? HEADERS.detailed.length : HEADERS.simple.length;
+    var operationalDay = payload.operationalDay || getOperationalDayKey_(new Date());
+    var openId = String(payload.openId || ("open_" + (payload.shiftStartedAt || ""))).trim();
 
-  // Fila vacía de separación.
-  sheet.appendRow(new Array(width).fill(""));
+    if (openId && shiftMarkerIdExists_(sheet, "CAMBIO DE TURNO", openId)) {
+      return {
+        ok: true,
+        action: "open_shift",
+        mode: mode,
+        operationalDay: operationalDay,
+        duplicate: true
+      };
+    }
 
-  // Fila marcador resaltada.
-  var markerRow = new Array(width).fill("");
-  markerRow[0] = "—— CAMBIO DE TURNO ——";
-  markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
-  markerRow[2] = formatTimestamp_(payload.timestamp);
-  markerRow[3] = "Empacadores: " + (payload.activePackerCount || 0);
-  if (width > 4) {
-    markerRow[4] = "Día operativo: " + operationalDay;
+    // Fila vacía de separación.
+    sheet.appendRow(new Array(width).fill(""));
+
+    // Fila marcador resaltada.
+    var markerRow = new Array(width).fill("");
+    markerRow[0] = "—— CAMBIO DE TURNO ——";
+    markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
+    markerRow[2] = formatTimestamp_(payload.timestamp);
+    markerRow[3] = "Empacadores: " + (payload.activePackerCount || 0);
+    if (width > 4) {
+      markerRow[4] = "Día operativo: " + operationalDay;
+    }
+    if (width > 5) {
+      markerRow[5] = "Turno: " + (payload.shiftName || "");
+    }
+    if (width > 6) {
+      markerRow[6] = "Calidad: " + (payload.calidad || "");
+    }
+    if (width > 7 && openId) {
+      markerRow[7] = "OpenID: " + openId;
+    }
+
+    sheet.appendRow(markerRow);
+    var markerRowIndex = sheet.getLastRow();
+    var range = sheet.getRange(markerRowIndex, 1, 1, width);
+    range.setFontWeight("bold");
+    range.setBackground("#fff3cd");
+
+    return { ok: true, action: "open_shift", mode: mode, operationalDay: operationalDay, row: markerRowIndex };
+  } finally {
+    lock.releaseLock();
   }
-  if (width > 5) {
-    markerRow[5] = "Turno: " + (payload.shiftName || "");
-  }
-  if (width > 6) {
-    markerRow[6] = "Calidad: " + (payload.calidad || "");
-  }
-
-  sheet.appendRow(markerRow);
-  var markerRowIndex = sheet.getLastRow();
-  var range = sheet.getRange(markerRowIndex, 1, 1, width);
-  range.setFontWeight("bold");
-  range.setBackground("#fff3cd");
-
-  return { ok: true, action: "open_shift", mode: mode, operationalDay: operationalDay, row: markerRowIndex };
 }
 
 function handleCloseShift_(payload) {
   var mode = payload.mode === "detailed" ? "detailed" : "simple";
-  var sheet = shiftSheetFor_(mode);
-  var width = mode === "detailed" ? HEADERS.detailed.length : HEADERS.simple.length;
+  var closeId = String(payload.reportId || payload.closeId || ("close_" + (payload.shiftStartedAt || ""))).trim();
   var reportInfo = { sent: false, skipped: true, reason: "Sin envío de reporte." };
 
-  // Antes de marcar el cierre: envía el reporte acumulado del turno.
+  // Reporte fuera del lock (tiene su propio anti-duplicado).
   if (mode === "detailed") {
     try {
       reportInfo = sendFinalShiftReport_(payload);
@@ -897,28 +1027,110 @@ function handleCloseShift_(payload) {
     }
   }
 
-  var markerRow = new Array(width).fill("");
-  markerRow[0] = "—— CIERRE DE TURNO ——";
-  markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
-  markerRow[2] = formatTimestamp_(payload.timestamp);
-  if (width > 3) {
-    markerRow[3] = "Día operativo: " + (payload.operationalDay || getOperationalDayKey_(new Date()));
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    var sheet = shiftSheetFor_(mode);
+    var width = mode === "detailed" ? HEADERS.detailed.length : HEADERS.simple.length;
+
+    // Si este CloseID ya existe, o el último CAMBIO ya tiene CIERRE, no agrega otro.
+    if (closeId && shiftMarkerIdExists_(sheet, "CIERRE DE TURNO", closeId)) {
+      return {
+        ok: true,
+        action: "close_shift",
+        mode: mode,
+        duplicate: true,
+        report: reportInfo
+      };
+    }
+    if (mode === "detailed" && lastDetailedShiftAlreadyClosed_()) {
+      return {
+        ok: true,
+        action: "close_shift",
+        mode: mode,
+        duplicate: true,
+        report: reportInfo
+      };
+    }
+
+    var markerRow = new Array(width).fill("");
+    markerRow[0] = "—— CIERRE DE TURNO ——";
+    markerRow[1] = "Supervisor: " + (payload.supervisor || payload._supervisorFromToken || "");
+    markerRow[2] = formatTimestamp_(payload.timestamp);
+    if (width > 3) {
+      markerRow[3] = "Día operativo: " + (payload.operationalDay || getOperationalDayKey_(new Date()));
+    }
+    if (width > 4 && closeId) {
+      markerRow[4] = "CloseID: " + closeId;
+    }
+
+    sheet.appendRow(markerRow);
+    var idx = sheet.getLastRow();
+    var range = sheet.getRange(idx, 1, 1, width);
+    range.setFontWeight("bold");
+    range.setBackground("#e2e8f0");
+
+    return { ok: true, action: "close_shift", mode: mode, report: reportInfo };
+  } finally {
+    lock.releaseLock();
   }
+}
 
-  sheet.appendRow(markerRow);
-  var idx = sheet.getLastRow();
-  var range = sheet.getRange(idx, 1, 1, width);
-  range.setFontWeight("bold");
-  range.setBackground("#e2e8f0");
+function lastDetailedShiftAlreadyClosed_() {
+  var sheet = ensureDetailedSheet_();
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return false; }
+  var values = sheet.getRange(2, 1, lastRow, 1).getDisplayValues();
+  var lastOpenRow = -1;
+  var lastCloseRow = -1;
+  var i;
+  for (i = 0; i < values.length; i += 1) {
+    var first = String(values[i][0] || "");
+    if (first.indexOf("CAMBIO DE TURNO") !== -1) {
+      lastOpenRow = i + 2;
+    }
+    if (first.indexOf("CIERRE DE TURNO") !== -1) {
+      lastCloseRow = i + 2;
+    }
+  }
+  return lastOpenRow > 0 && lastCloseRow > lastOpenRow;
+}
 
-  return { ok: true, action: "close_shift", mode: mode, report: reportInfo };
+/**
+ * Busca un marcador CAMBIO/CIERRE reciente que ya tenga el mismo OpenID/CloseID.
+ */
+function shiftMarkerIdExists_(sheet, markerKind, markerId) {
+  if (!sheet || !markerId) { return false; }
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return false; }
+  var lastCol = Math.max(sheet.getLastColumn(), 5);
+  var start = Math.max(2, lastRow - 300);
+  var values = sheet.getRange(start, 1, lastRow, lastCol).getDisplayValues();
+  var needle = String(markerId).trim();
+  var i;
+  var c;
+  for (i = 0; i < values.length; i += 1) {
+    var first = String(values[i][0] || "");
+    if (first.indexOf(markerKind) === -1) {
+      continue;
+    }
+    for (c = 0; c < values[i].length; c += 1) {
+      var cell = String(values[i][c] || "");
+      if (cell.indexOf(needle) !== -1) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function sendFinalShiftReport_(payload) {
   var active = findActiveDetailedShift_();
   var emails = resolveReportEmails_(payload.emails);
+  var shiftKey = payload.shiftStartedAt || active.shiftStartedAtIso || "";
+  var reportId = String(payload.reportId || ("close_" + shiftKey)).trim();
   var report = buildPackerReport_({
-    shiftStartedAt: payload.shiftStartedAt || active.shiftStartedAtIso || "",
+    shiftStartedAt: shiftKey,
     shiftName: payload.shiftName || active.shiftName || "",
     supervisor: payload.supervisor || payload._supervisorFromToken || active.supervisor || "",
     calidad: payload.calidad || active.calidad || "",
@@ -940,18 +1152,27 @@ function sendFinalShiftReport_(payload) {
 
   // Marca en el correo que es el cierre de turno.
   report.windowLabel = "Cierre de turno · acumulado" +
-    (payload.shiftStartedAt || active.shiftStartedAtIso
-      ? " (desde " + formatTimestamp_(payload.shiftStartedAt || active.shiftStartedAtIso) + ")"
-      : "");
+    (shiftKey ? " (desde " + formatTimestamp_(shiftKey) + ")" : "");
+  report.reportId = reportId;
 
-  var mail = sendReportEmail_(report, emails);
+  var mail = sendReportEmail_(report, emails, reportId);
+  if (mail && mail.duplicate) {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "Reporte de cierre ya enviado.",
+      packers: report.rows.length,
+      boxes: report.totalBoxes,
+      email: mail
+    };
+  }
   return {
     sent: Boolean(mail && mail.sent),
     skipped: false,
     packers: report.rows.length,
     boxes: report.totalBoxes,
     email: mail,
-    reason: mail && mail.sent ? "Reporte de cierre enviado." : (mail && mail.detail) || "No se envió el correo."
+    reason: ""
   };
 }
 
@@ -978,8 +1199,14 @@ function handleSendReport_(payload) {
   var emails = resolveReportEmails_(payload.emails);
   // Acumulado del turno abierto (historial desde CAMBIO DE TURNO).
   var active = findActiveDetailedShift_();
+  var shiftKey = payload.shiftStartedAt || active.shiftStartedAtIso || "";
+  // Misma ventana de 1 min = mismo envío (reintento/timeout no duplica).
+  var reportId = String(
+    payload.reportId ||
+    ("manual_" + shiftKey + "_" + Math.floor(new Date().getTime() / 60000))
+  ).trim();
   var report = buildPackerReport_({
-    shiftStartedAt: payload.shiftStartedAt || active.shiftStartedAtIso || "",
+    shiftStartedAt: shiftKey,
     shiftName: payload.shiftName || active.shiftName || "",
     supervisor: payload.supervisor || payload._supervisorFromToken || active.supervisor || "",
     calidad: payload.calidad || active.calidad || "",
@@ -1000,7 +1227,19 @@ function handleSendReport_(payload) {
     };
   }
 
-  var mail = sendReportEmail_(report, emails);
+  report.reportId = reportId;
+  var mail = sendReportEmail_(report, emails, reportId);
+  if (mail && mail.duplicate) {
+    return {
+      ok: true,
+      action: "send_report",
+      skipped: true,
+      reason: "Ese reporte ya se envió (evitado duplicado).",
+      packers: report.rows.length,
+      boxes: report.totalBoxes,
+      duplicate: true
+    };
+  }
   return {
     ok: true,
     action: "send_report",
@@ -1022,14 +1261,17 @@ function sendScheduledReport() {
     return { ok: true, skipped: true, reason: "No hay turno activo." };
   }
 
+  var shiftKey = active.shiftStartedAtIso || "";
+  var bucket = Math.floor(new Date().getTime() / (2 * 60 * 60 * 1000));
+  var reportId = "sched_" + shiftKey + "_" + bucket;
   var report = buildPackerReport_({
-    shiftStartedAt: active.shiftStartedAtIso || "",
+    shiftStartedAt: shiftKey,
     shiftName: active.shiftName || "",
     supervisor: active.supervisor || "",
     calidad: active.calidad || "",
     operationalDay: active.operationalDay || getOperationalDayKey_(new Date()),
     hoursBack: 0,
-    sinceShiftStart: Boolean(active.shiftStartedAtIso),
+    sinceShiftStart: Boolean(shiftKey),
     sinceRow: active.startRow || 0
   });
 
@@ -1037,11 +1279,16 @@ function sendScheduledReport() {
     return { ok: true, skipped: true, reason: "Turno activo sin información para reportar." };
   }
 
+  report.reportId = reportId;
   var emails = getStoredReportEmails_();
+  var mail = sendReportEmail_(report, emails, reportId);
+  if (mail && mail.duplicate) {
+    return { ok: true, skipped: true, reason: "Reporte programado ya enviado en esta ventana.", duplicate: true };
+  }
   return {
     ok: true,
     skipped: false,
-    email: sendReportEmail_(report, emails),
+    email: mail,
     packers: report.rows.length,
     boxes: report.totalBoxes
   };
@@ -1446,42 +1693,84 @@ function parseSheetTimestampMs_(value) {
   return isNaN(parsed.getTime()) ? 0 : parsed.getTime();
 }
 
-function sendReportEmail_(report, emails) {
-  var to = (emails && emails.length ? emails : CONFIG.REPORT_EMAILS).join(",");
-  var subject =
-    "SOAZ Reporte QC · " +
-    (report.shiftName || "Turno") + " · " +
-    (report.operationalDay || "") + " · " +
-    report.generatedAt;
-
-  var html = buildReportHtml_(report);
-  var result = { sent: false, detail: "" };
+function sendReportEmail_(report, emails, reportId) {
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
   try {
-    MailApp.sendEmail({
-      to: to,
-      subject: subject,
-      htmlBody: html,
-      body: "Reporte SOAZ de inspección de calidad. Abrí este correo en un cliente que soporte HTML."
-    });
-    result.sent = true;
-    result.detail = "Email enviado a " + to;
-  } catch (mailError) {
-    result.detail = errText_(mailError);
-  }
+    var id = String(reportId || report.reportId || "").trim();
+    if (id && reportIdExists_(id)) {
+      return { sent: false, detail: "Reporte ya registrado", duplicate: true };
+    }
 
-  // También deja una copia en hoja Reportes
-  try {
-    logReportRow_(report, to, result);
-  } catch (ignoreLog) {
-  }
+    var to = (emails && emails.length ? emails : CONFIG.REPORT_EMAILS).join(",");
+    var subject =
+      "SOAZ Reporte QC · " +
+      (report.shiftName || "Turno") + " · " +
+      (report.operationalDay || "") + " · " +
+      report.generatedAt;
 
-  return result;
+    var html = buildReportHtml_(report);
+    var result = { sent: false, detail: "" };
+    try {
+      MailApp.sendEmail({
+        to: to,
+        subject: subject,
+        htmlBody: html,
+        body: "Reporte SOAZ de inspección de calidad. Abrí este correo en un cliente que soporte HTML."
+      });
+      result.sent = true;
+      result.detail = "Email enviado a " + to;
+    } catch (mailError) {
+      result.detail = errText_(mailError);
+    }
+
+    // También deja una copia en hoja Reportes
+    try {
+      logReportRow_(report, to, result, id);
+    } catch (ignoreLog) {
+    }
+
+    return result;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
-function logReportRow_(report, emails, mailResult) {
+function reportIdExists_(reportId) {
+  if (!reportId) { return false; }
   var sheet = getOrCreateSheet_("Reportes", [
-    "Timestamp", "Día operativo", "Turno", "Supervisor", "Ventana", "Empacadores", "Cajas c/desv", "Emails", "Resultado"
+    "Timestamp", "Día operativo", "Turno", "Supervisor", "Ventana", "Empacadores", "Cajas c/desv", "Emails", "Resultado", "Report ID"
   ]);
+  ensureReportIdColumn_(sheet);
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { return false; }
+  var values = sheet.getRange(2, 10, lastRow, 10).getDisplayValues();
+  var i;
+  for (i = 0; i < values.length; i += 1) {
+    if (String(values[i][0] || "").trim() === reportId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function ensureReportIdColumn_(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 10) {
+    sheet.getRange(1, 10).setValue("Report ID").setFontWeight("bold");
+  } else {
+    var header = String(sheet.getRange(1, 10).getDisplayValue() || "").trim();
+    if (!header) {
+      sheet.getRange(1, 10).setValue("Report ID").setFontWeight("bold");
+    }
+  }
+}
+
+function logReportRow_(report, emails, mailResult, reportId) {
+  var sheet = getOrCreateSheet_("Reportes", [
+    "Timestamp", "Día operativo", "Turno", "Supervisor", "Ventana", "Empacadores", "Cajas c/desv", "Emails", "Resultado", "Report ID"
+  ]);
+  ensureReportIdColumn_(sheet);
   sheet.appendRow([
     report.generatedAt,
     report.operationalDay,
@@ -1491,7 +1780,8 @@ function logReportRow_(report, emails, mailResult) {
     report.rows.length,
     report.totalBoxes,
     emails,
-    mailResult.sent ? "OK" : mailResult.detail
+    mailResult.sent ? "OK" : mailResult.detail,
+    reportId || report.reportId || ""
   ]);
 }
 

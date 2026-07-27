@@ -1104,7 +1104,7 @@
       "use strict";
 
       var CONFIG = {
-        apiBaseUrl: "https://script.google.com/macros/s/AKfycbypl1iAm9R1GWrl8I2g4TTo5kufYIqSHNZM599f_a9aqaGfJutMqxQueRNU8A5pGNMD/exec",
+        apiBaseUrl: "https://script.google.com/macros/s/AKfycbygEYSYNDj7qCEasIgw0h3JysnkEpJ8yCNTpV8xeR_gIxyJrYVi5N_crJmWYJOaHZ16/exec",
         reportEmails: ["antoniozm007@gmail.com"],
         calidadNames: ["MICAELA P.", "YOLANDA C.", "KARLA S.", "MARIA R.", "GRACIELA C."],
         supervisorNames: ["YURIDIA M.", "FERNANDO B.", "MARIO S.", "EMANUEL G."],
@@ -1170,6 +1170,7 @@
         pendingQueue: [],
         isSyncing: false,
         isRegistering: false,
+        isClosingShift: false,
         isSendingReport: false,
         emailsEditPassword: "",
         pendingConfigAction: null,
@@ -1716,6 +1717,7 @@
         state.flowStack = [];
         state.currentAudit = null;
         state.isRegistering = false;
+        state.isClosingShift = false;
         state.isSendingReport = false;
         state.emailsEditPassword = "";
         state.pendingConfigAction = null;
@@ -2496,8 +2498,9 @@
           emails: getReportEmails()
         };
         sendToApi(alertPayload).catch(function () {
-          state.pendingQueue.push(alertPayload);
-          savePendingQueue();
+          alertPayload.retryAfter = Date.now() + 60000;
+          enqueuePendingUnique(alertPayload);
+          showToast("Alerta en cola local.", "info");
         });
       }
 
@@ -2607,9 +2610,13 @@
         if (!record) { return; }
         var auditId = String(record.auditId || "").trim();
         var recordId = String(record.recordId || "").trim();
+        var alertId = String(record.alertId || "").trim();
+        var reportId = String(record.reportId || "").trim();
         var exists = state.pendingQueue.some(function (item) {
           if (auditId && item.auditId === auditId) { return true; }
           if (recordId && item.recordId === recordId) { return true; }
+          if (alertId && item.alertId === alertId) { return true; }
+          if (reportId && item.reportId === reportId) { return true; }
           return false;
         });
         if (exists) { return; }
@@ -2621,10 +2628,14 @@
         if (!record || state.pendingQueue.length === 0) { return; }
         var auditId = String(record.auditId || "").trim();
         var recordId = String(record.recordId || "").trim();
+        var alertId = String(record.alertId || "").trim();
+        var reportId = String(record.reportId || "").trim();
         var before = state.pendingQueue.length;
         state.pendingQueue = state.pendingQueue.filter(function (item) {
           if (auditId && item.auditId === auditId) { return false; }
           if (recordId && item.recordId === recordId) { return false; }
+          if (alertId && item.alertId === alertId) { return false; }
+          if (reportId && item.reportId === reportId) { return false; }
           return true;
         });
         if (state.pendingQueue.length !== before) {
@@ -2657,7 +2668,9 @@
           var settled = false;
           var softTimedOut = false;
           var isRegister = payload && payload.action && String(payload.action).indexOf("register_") === 0;
-          var timeoutMs = isRegister ? 45000 : 20000;
+          var isSlowAction = isRegister ||
+            (payload && (payload.action === "close_shift" || payload.action === "send_report" || payload.action === "send_alert" || payload.action === "open_shift"));
+          var timeoutMs = isSlowAction ? 90000 : 20000;
 
           var timer = window.setTimeout(function () {
             if (settled) { return; }
@@ -2799,7 +2812,8 @@
             for (var q = 0; q < state.pendingQueue.length; q += 1) {
               var pending = state.pendingQueue[q];
               if (pending.retryAfter && pending.retryAfter > Date.now()) {
-                remainingIds[String(pending.auditId || pending.recordId || q)] = pending;
+                var key = String(pending.auditId || pending.recordId || pending.alertId || pending.reportId || ("q" + q));
+                remainingIds[key] = pending;
               }
             }
             state.pendingQueue = Object.keys(remainingIds).map(function (k) { return remainingIds[k]; });
@@ -2950,6 +2964,7 @@
         if (!state.shiftMarkerSent) {
           apiRequest({
             action: "open_shift",
+            openId: "open_" + String(state.shiftStartedAt || nowIso()),
             timestamp: nowIso(),
             operationalDay: state.operationalDay,
             shiftStartedAt: state.shiftStartedAt,
@@ -2983,6 +2998,7 @@
         }
         apiRequest({
           action: "send_report",
+          reportId: uid("report"),
           timestamp: nowIso(),
           operationalDay: state.operationalDay,
           shiftStartedAt: state.shiftStartedAt,
@@ -3033,9 +3049,15 @@
       function handleCloseShift() { dom.modalCloseShift.classList.add("open"); }
 
       function confirmCloseShift() {
+        if (state.isClosingShift) { return; }
+        state.isClosingShift = true;
         dom.modalCloseShift.classList.remove("open");
+        if (dom.btnConfirmCloseShift) { dom.btnConfirmCloseShift.disabled = true; }
+
         var closePayload = {
           action: "close_shift",
+          reportId: "close_" + String(state.shiftStartedAt || nowIso()),
+          closeId: "close_" + String(state.shiftStartedAt || nowIso()),
           timestamp: nowIso(),
           operationalDay: state.operationalDay,
           shiftStartedAt: state.shiftStartedAt,
@@ -3048,7 +3070,9 @@
 
         apiRequest(closePayload).then(function (data) {
           var report = data && data.report;
-          if (report && report.sent) {
+          if (data && data.duplicate) {
+            showToast("Turno cerrado (ya estaba registrado).", "info");
+          } else if (report && report.sent) {
             showToast("Turno cerrado. Reporte final enviado.", "success");
           } else if (report && report.skipped) {
             showToast("Turno cerrado. " + (report.reason || "Sin datos para reporte."), "info");
@@ -3057,10 +3081,12 @@
           }
         }).catch(function () {
           // Asegura el cierre local aunque falle la red; el reporte puede quedar pendiente.
-          state.pendingQueue.push(closePayload);
-          savePendingQueue();
-          showToast("Turno cerrado localmente. Reporte pendiente de sincronizar.", "info");
+          closePayload.retryAfter = Date.now() + 60000;
+          enqueuePendingUnique(closePayload);
+          showToast("Turno cerrado localmente. Cierre pendiente de sincronizar.", "info");
         }).finally(function () {
+          state.isClosingShift = false;
+          if (dom.btnConfirmCloseShift) { dom.btnConfirmCloseShift.disabled = false; }
           resetShiftState();
           dom.supervisorName.value = "";
           if (dom.calidadSelect) { dom.calidadSelect.value = ""; }
