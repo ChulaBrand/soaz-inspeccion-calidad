@@ -124,8 +124,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v19",
-        message: "API activa. v19: Mal Acomodo, Pudrición y Golpe/Tallones primero y en rojo en reporte."
+        version: "report-v20",
+        message: "API activa. v20: prioridad en rojo también en cantidad por tipo."
       };
     }
     return respond_(e, result);
@@ -1799,10 +1799,15 @@ function buildReportHtml_(report) {
 
   for (i = 0; i < defectTotals.length; i += 1) {
     var d = defectTotals[i];
+    var isPriorityDefect =
+      d.name === "Mal Acomodo" ||
+      d.name === "Pudrición" ||
+      d.name === "Golpe / Tallones";
+    var rowColor = isPriorityDefect ? "color:#dc2626;" : "";
     defectTypeRows +=
       "<tr>" +
-      "<td>" + esc_(d.name) + "</td>" +
-      "<td style='text-align:right;'>" + (Number(d.cantidad) || 0) + "</td>" +
+      "<td style='" + rowColor + "'>" + esc_(d.name) + "</td>" +
+      "<td style='text-align:right;" + rowColor + "'>" + (Number(d.cantidad) || 0) + "</td>" +
       "</tr>";
   }
 
