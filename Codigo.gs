@@ -124,8 +124,8 @@ function doGet(e) {
       result = {
         ok: true,
         service: "SOAZ Inspección de Calidad",
-        version: "report-v18",
-        message: "API activa. v18: anti-duplicados en cierre/apertura de turno."
+        version: "report-v19",
+        message: "API activa. v19: Mal Acomodo, Pudrición y Golpe/Tallones primero y en rojo en reporte."
       };
     }
     return respond_(e, result);
@@ -1186,8 +1186,8 @@ function sendFinalShiftReport_(payload) {
 var REPORT_DEFECT_COLS = [
   "Mal Acomodo",
   "Pudrición",
-  "Mal Envuelto",
   "Golpe / Tallones",
+  "Mal Envuelto",
   "Colores Mixtos",
   "Calibre Revuelto",
   "Calidades Revueltas",
@@ -1824,10 +1824,10 @@ function buildReportHtml_(report) {
       "<td style='text-align:right;'>" + r.cajas + "</td>" +
       "<td style='text-align:right;'>" + (r.countT != null ? r.countT : "—") + "</td>" +
       "<td style='text-align:right;'>" + (r.desv || 0) + "</td>" +
-      "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Acomodo"]) + "</td>" +
-      "<td style='text-align:right;'>" + fmtDef_(r.defects["Pudrición"]) + "</td>" +
+      "<td style='text-align:right;color:#dc2626;'>" + fmtDef_(r.defects["Mal Acomodo"]) + "</td>" +
+      "<td style='text-align:right;color:#dc2626;'>" + fmtDef_(r.defects["Pudrición"]) + "</td>" +
+      "<td style='text-align:right;color:#dc2626;'>" + fmtDef_(r.defects["Golpe / Tallones"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Mal Envuelto"]) + "</td>" +
-      "<td style='text-align:right;'>" + fmtDef_(r.defects["Golpe / Tallones"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Colores Mixtos"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Calibre Revuelto"]) + "</td>" +
       "<td style='text-align:right;'>" + fmtDef_(r.defects["Calidades Revueltas"]) + "</td>" +
@@ -1846,7 +1846,7 @@ function buildReportHtml_(report) {
   return (
     "<div style='font-family:Arial,sans-serif;color:#111;'>" +
     "<h2 style='margin:0 0 8px;'>SOAZ · Reporte de Inspección</h2>" +
-    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v15 · Acumulado del turno</p>" +
+    "<p style='margin:0 0 4px;color:#666;font-size:12px;'>Formato reporte: report-v19 · Acumulado del turno</p>" +
     "<p style='margin:0 0 16px;color:#444;'>" +
     "Generado: <b>" + esc_(report.generatedAt) + "</b><br>" +
     "Día operativo: <b>" + esc_(report.operationalDay || "—") + "</b><br>" +
@@ -1884,7 +1884,10 @@ function buildReportHtml_(report) {
     "<table cellpadding='6' cellspacing='0' border='1' style='border-collapse:collapse;font-size:13px;'>" +
     "<tr style='background:#f3f4f6;'>" +
     "<th>CODIGO</th><th>NOMBRE</th><th>CAJAS</th><th>COUNT T.</th><th>DESV</th>" +
-    "<th>Mal Acomodo</th><th>Pudrición</th><th>Mal Envuelto</th><th>Golpe / Tallones</th>" +
+    "<th style='color:#dc2626;'>Mal Acomodo</th>" +
+    "<th style='color:#dc2626;'>Pudrición</th>" +
+    "<th style='color:#dc2626;'>Golpe / Tallones</th>" +
+    "<th>Mal Envuelto</th>" +
     "<th>Colores Mixtos</th><th>Calibre Revuelto</th><th>Calidades Revueltas</th>" +
     "<th>Mal Pesado</th><th>Caja Mala</th>" +
     "</tr>" +
