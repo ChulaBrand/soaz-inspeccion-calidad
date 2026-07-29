@@ -824,11 +824,12 @@
           </div>
 
           <div class="field-group">
-            <div class="field-label">Turno</div>
-            <div class="search-mode" id="shiftSelectGroup" style="padding:12px;background:var(--bg-elevated);border:2px solid var(--border);border-radius:var(--radius-sm);">
-              <label><input type="radio" name="shiftSelect" value="Primer turno" checked> Primer turno</label>
-              <label><input type="radio" name="shiftSelect" value="Segundo turno"> Segundo turno</label>
-            </div>
+            <label class="field-label" for="shiftSelect">* Turno</label>
+            <select class="field-input" id="shiftSelect" name="shiftSelect" required>
+              <option value="">Selecciona el turno...</option>
+              <option value="Primer turno">Primer turno</option>
+              <option value="Segundo turno">Segundo turno</option>
+            </select>
           </div>
 
           <label class="toggle-row" for="detailedModeToggle">
@@ -1018,6 +1019,28 @@
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" id="btnCancelCloseShift">Cancelar</button>
         <button class="btn btn-danger" type="button" id="btnConfirmCloseShift">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalConfirmLogin">
+    <div class="modal-card">
+      <h2 class="modal-title">Confirmar inicio de turno</h2>
+      <p class="modal-text" id="confirmLoginText">Revisa que los datos sean correctos antes de continuar.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCancelConfirmLogin">Corregir</button>
+        <button class="btn btn-primary" type="button" id="btnConfirmLogin">Confirmar e iniciar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalConfirmReport">
+    <div class="modal-card">
+      <h2 class="modal-title">Enviar reporte</h2>
+      <p class="modal-text" id="confirmReportText">¿Confirmas enviar el reporte del turno por correo?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" id="btnCancelConfirmReport">Cancelar</button>
+        <button class="btn btn-primary" type="button" id="btnConfirmSendReport">Enviar reporte</button>
       </div>
     </div>
   </div>
@@ -2856,13 +2879,46 @@
         var calidad = dom.calidadSelect ? dom.calidadSelect.value.trim() : "";
         var name = dom.supervisorName.value.trim();
         var password = dom.password.value;
+        var shiftName = dom.shiftSelect ? String(dom.shiftSelect.value || "").trim() : "";
         if (!calidad) { showToast("Selecciona el responsable de Calidad.", "error"); return; }
         if (!name) { showToast("Selecciona el Supervisor.", "error"); return; }
         if (!password) { showToast("La contraseña es obligatoria.", "error"); return; }
+        if (!shiftName) { showToast("Selecciona el turno (Primer o Segundo).", "error"); return; }
         if (window.location.protocol === "file:") { showToast("Abre la app con abrir-app.bat (http://127.0.0.1:8080/)", "error"); return; }
 
+        if (dom.confirmLoginText) {
+          dom.confirmLoginText.innerHTML =
+            "¿Confirmas iniciar con estos datos?<br><br>" +
+            "<b>Calidad:</b> " + escHtml_(calidad) + "<br>" +
+            "<b>Supervisor:</b> " + escHtml_(name) + "<br>" +
+            "<b>Turno:</b> " + escHtml_(shiftName) + "<br>" +
+            "<b>Modo:</b> " + (dom.detailedModeToggle.checked ? "Detallado" : "Simple");
+        }
+        if (dom.modalConfirmLogin) { dom.modalConfirmLogin.classList.add("open"); }
+      }
+
+      function escHtml_(text) {
+        return String(text || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function startAuthenticatedShift() {
+        var calidad = dom.calidadSelect ? dom.calidadSelect.value.trim() : "";
+        var name = dom.supervisorName.value.trim();
+        var password = dom.password.value;
+        var shiftName = dom.shiftSelect ? String(dom.shiftSelect.value || "").trim() : "";
+        if (!calidad || !name || !password || !shiftName) {
+          showToast("Completa Calidad, Supervisor, contraseña y turno.", "error");
+          return;
+        }
+
+        if (dom.modalConfirmLogin) { dom.modalConfirmLogin.classList.remove("open"); }
         dom.btnLogin.disabled = true;
         dom.btnLogin.textContent = "Verificando...";
+        if (dom.btnConfirmLogin) { dom.btnConfirmLogin.disabled = true; }
 
         apiRequest({
           action: "authenticate",
@@ -2873,7 +2929,7 @@
           state.token = data.token;
           state.supervisor = data.supervisor || name;
           state.calidad = data.calidad || calidad;
-          state.shiftName = getSelectedSearchMode("shiftSelect") || "Primer turno";
+          state.shiftName = shiftName;
           state.detailedMode = dom.detailedModeToggle.checked;
           state.shiftStartedAt = nowIso();
           state.operationalDay = getOperationalDay(new Date());
@@ -2900,6 +2956,7 @@
         }).finally(function () {
           dom.btnLogin.disabled = false;
           dom.btnLogin.textContent = "Iniciar Turno";
+          if (dom.btnConfirmLogin) { dom.btnConfirmLogin.disabled = false; }
         });
       }
 
@@ -2990,12 +3047,32 @@
           return;
         }
         closeGearMenu();
+        var emails = getReportEmails();
+        if (dom.confirmReportText) {
+          dom.confirmReportText.innerHTML =
+            "¿Confirmas enviar el reporte del turno por correo?<br><br>" +
+            "<b>Turno:</b> " + escHtml_(state.shiftName || "—") + "<br>" +
+            "<b>Calidad:</b> " + escHtml_(state.calidad || "—") + "<br>" +
+            "<b>Supervisor:</b> " + escHtml_(state.supervisor || "—") + "<br>" +
+            "<b>Destinatarios:</b> " + escHtml_(emails.join(", ") || "—");
+        }
+        if (dom.modalConfirmReport) { dom.modalConfirmReport.classList.add("open"); }
+      }
+
+      function confirmSendReport() {
+        if (state.isSendingReport) { return; }
+        if (!state.token) {
+          showToast("Inicia sesión para enviar el reporte.", "error");
+          return;
+        }
+        if (dom.modalConfirmReport) { dom.modalConfirmReport.classList.remove("open"); }
         state.isSendingReport = true;
         var emails = getReportEmails();
         if (dom.menuSendReport) {
           dom.menuSendReport.disabled = true;
           dom.menuSendReport.textContent = "Enviando...";
         }
+        if (dom.btnConfirmSendReport) { dom.btnConfirmSendReport.disabled = true; }
         apiRequest({
           action: "send_report",
           reportId: uid("report"),
@@ -3022,6 +3099,7 @@
             dom.menuSendReport.disabled = false;
             dom.menuSendReport.textContent = "Enviar reporte";
           }
+          if (dom.btnConfirmSendReport) { dom.btnConfirmSendReport.disabled = false; }
         });
       }
 
@@ -3090,6 +3168,7 @@
           resetShiftState();
           dom.supervisorName.value = "";
           if (dom.calidadSelect) { dom.calidadSelect.value = ""; }
+          if (dom.shiftSelect) { dom.shiftSelect.value = ""; }
           if (dom.password) { dom.password.value = ""; }
           updateHeader();
           showScreen("screenLogin");
@@ -3225,6 +3304,23 @@
         });
         dom.btnCancelCloseShift.addEventListener("click", function () { dom.modalCloseShift.classList.remove("open"); });
         dom.btnConfirmCloseShift.addEventListener("click", confirmCloseShift);
+
+        if (dom.btnCancelConfirmLogin) {
+          dom.btnCancelConfirmLogin.addEventListener("click", function () {
+            if (dom.modalConfirmLogin) { dom.modalConfirmLogin.classList.remove("open"); }
+          });
+        }
+        if (dom.btnConfirmLogin) {
+          dom.btnConfirmLogin.addEventListener("click", startAuthenticatedShift);
+        }
+        if (dom.btnCancelConfirmReport) {
+          dom.btnCancelConfirmReport.addEventListener("click", function () {
+            if (dom.modalConfirmReport) { dom.modalConfirmReport.classList.remove("open"); }
+          });
+        }
+        if (dom.btnConfirmSendReport) {
+          dom.btnConfirmSendReport.addEventListener("click", confirmSendReport);
+        }
 
         dom.btnDismissAlert3.addEventListener("click", function () { dom.modalAlert3.classList.remove("open"); });
 
@@ -3375,6 +3471,15 @@
         dom.toastContainer = byId("toastContainer");
         dom.modalCloseShift = byId("modalCloseShift");
         dom.btnCancelCloseShift = byId("btnCancelCloseShift");
+        dom.modalConfirmLogin = byId("modalConfirmLogin");
+        dom.confirmLoginText = byId("confirmLoginText");
+        dom.btnCancelConfirmLogin = byId("btnCancelConfirmLogin");
+        dom.btnConfirmLogin = byId("btnConfirmLogin");
+        dom.modalConfirmReport = byId("modalConfirmReport");
+        dom.confirmReportText = byId("confirmReportText");
+        dom.btnCancelConfirmReport = byId("btnCancelConfirmReport");
+        dom.btnConfirmSendReport = byId("btnConfirmSendReport");
+        dom.shiftSelect = byId("shiftSelect");
         dom.btnConfirmCloseShift = byId("btnConfirmCloseShift");
         dom.modalClearSel = byId("modalClearSel");
         dom.btnCancelClearSel = byId("btnCancelClearSel");
@@ -3411,7 +3516,9 @@
         updateSyncBanner();
 
         if (loadShiftDraft()) {
-          setSearchModeRadios("shiftSelect", state.shiftName || "Primer turno");
+          if (dom.shiftSelect && state.shiftName) {
+            dom.shiftSelect.value = state.shiftName;
+          }
           updateHeader();
           renderPackerManageList();
           refreshPackersFromCloud(false).catch(function () {});
